@@ -1,0 +1,13 @@
+# PCS / Iron Condor Trade Decisioning Tool — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+flask>=3.0.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+pandas>=2.0.0
+
+# Data source libraries — install only what you need based on DATA_SOURCE in .env
+yfinance>=0.2.38         # DATA_SOURCE=yfinance (default, no API key needed)
+# No extra packages needed for finnhub (uses requests)
+# No extra packages needed for alphavantage (uses requests)
+# No extra packages needed for polygon (uses requests)
