@@ -98,7 +98,7 @@ cp .env.example .env
 python app.py
 
 # Open your browser to:
-# http://localhost:5000
+# http://localhost:5057
 ```
 
 **Workflow:**

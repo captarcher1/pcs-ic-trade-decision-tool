@@ -238,23 +238,60 @@ def _market_data_finnhub(ticker):
 
 
 def _eco_finnhub():
-    from_date, to_date = _get_week_bounds()
-    data = _fh_get("/calendar/economic",
-                   {"from": from_date, "to": to_date})
-    raw = data.get("economicCalendar", [])
+    """
+    Finnhub's /calendar/economic endpoint moved behind a paid tier and now
+    returns a 402 (or similar) for free-tier keys. Any failure here —
+    HTTP error, timeout, malformed response — falls back to the hardcoded,
+    sourced 2026 calendar in eco_calendar_2026.py rather than propagating
+    a 502 up to the frontend.
+    """
+    try:
+        from_date, to_date = _get_week_bounds()
+        data = _fh_get("/calendar/economic",
+                       {"from": from_date, "to": to_date})
+        raw = data.get("economicCalendar", [])
+        events = []
+        for e in raw:
+            if (e.get("country") or "").upper() != "US":
+                continue
+            imp = _classify_event(e.get("event", ""))
+            if not imp:
+                continue
+            d   = datetime.datetime.fromisoformat(
+                (e.get("time") or e.get("date") or "")[:10]
+            )
+            events.append({"day": DAY_LABELS[d.weekday() + 1 if d.weekday() < 6 else 0],
+                           "name": e["event"], "impact": imp})
+        return _build_eco_response(events, "finnhub")
+    except Exception:
+        return _eco_hardcoded_2026()
+
+
+def _eco_hardcoded_2026():
+    """
+    Fallback economic calendar: hardcoded, sourced 2026 US macro release
+    dates (FOMC, CPI, NFP, PPI, GDP, PCE) plus a computed weekly Thursday
+    jobless-claims entry. See data/eco_calendar_2026.py for sources.
+
+    Reuses _classify_event() / _build_eco_response() so the output shape
+    and impact rules are identical to every other source in this file.
+    """
+    from data.eco_calendar_2026 import get_events
+
+    mon_str, fri_str = _get_week_bounds()
+    week_mon = datetime.date.fromisoformat(mon_str)
+    week_fri = datetime.date.fromisoformat(fri_str)
+
+    raw = get_events(week_mon, week_fri)
     events = []
     for e in raw:
-        if (e.get("country") or "").upper() != "US":
-            continue
-        imp = _classify_event(e.get("event", ""))
+        imp = _classify_event(e["name"])
         if not imp:
             continue
-        d   = datetime.datetime.fromisoformat(
-            (e.get("time") or e.get("date") or "")[:10]
-        )
-        events.append({"day": DAY_LABELS[d.weekday() + 1 if d.weekday() < 6 else 0],
-                       "name": e["event"], "impact": imp})
-    return _build_eco_response(events, "finnhub")
+        d = e["date"]
+        events.append({"day": DAY_LABELS[d.weekday() + 1], "name": e["name"], "impact": imp})
+
+    return _build_eco_response(events, "hardcoded-2026")
 
 
 # ─────────────────────────────────────────────

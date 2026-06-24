@@ -1,0 +1,81 @@
+PCS / IC TRADE DECISIONING TOOL — GITHUB PUSH INSTRUCTIONS
+============================================================
+Repo:   https://github.com/captarcher1/pcs-ic-trade-decision-tool
+Branch: main (currently up to date with origin/main before these changes)
+
+WHAT CHANGED SINCE THE LAST COMMIT
+-----------------------------------
+Modified:
+  app.py                  - new /api/eco-calendar-scraped route, port default moved to 5057
+  data/data_fetcher.py     - _eco_finnhub() now falls back to the hardcoded 2026 calendar on failure
+  requirements.txt         - added beautifulsoup4, lxml
+  .env.example              - FLASK_PORT default updated to 5057
+  README.md                - usage instructions updated to localhost:5057
+  templates/index.html     - added second "MarketWatch (scraped)" calendar panel + JS
+
+New files:
+  data/eco_calendar_2026.py        - hardcoded, sourced 2026 FOMC/CPI/NFP/PPI/GDP/PCE dates
+  data/eco_scraper_marketwatch.py  - MarketWatch economic-calendar scraper (isolated, fails quiet)
+
+Not committed (intentionally, via .gitignore):
+  .env  - contains your local API keys / port config, never push this
+
+STEP-BY-STEP: PUSH TO GITHUB
+-----------------------------
+Run these from a terminal at the project folder:
+C:\Users\prana\OneDrive\Personal-Documents\My-Projects\outputs\trading\pcs-ic-trade-decisionmaker
+
+1. Check what's about to be committed:
+     git status
+
+2. Stage everything except what .gitignore already excludes (.env, venv/, __pycache__/):
+     git add -A
+
+3. Review the staged diff one more time before committing (optional but recommended):
+     git status
+     git diff --cached --stat
+
+4. Commit with a descriptive message:
+     git commit -m "Add hardcoded 2026 eco calendar fallback + MarketWatch scraper panel; move port to 5057"
+
+5. Push to the main branch:
+     git push origin main
+
+That's it — refresh the repo page on GitHub to confirm the new commit is there.
+
+TROUBLESHOOTING
+----------------
+"Unable to create '.git/index.lock': File exists"
+  This project folder lives inside OneDrive, and OneDrive's background sync can
+  occasionally leave a stale lock file behind after an interrupted git operation.
+  Fix: close any other terminal/IDE that might be mid-git-operation, then delete
+  the lock file and retry:
+    Remove-Item .git\index.lock
+    git status
+
+Authentication errors on push (password no longer accepted)
+  GitHub requires a Personal Access Token (PAT) or SSH key instead of your
+  account password for git operations over HTTPS.
+  - PAT: GitHub.com -> Settings -> Developer settings -> Personal access tokens
+    -> generate one with "repo" scope, then use it in place of your password
+    when prompted (or store it via `git credential-manager` / Windows Credential
+    Manager so you're not prompted every time).
+  - SSH: if you'd rather not deal with tokens, switch the remote to SSH:
+      git remote set-url origin git@github.com:captarcher1/pcs-ic-trade-decision-tool.git
+    (requires an SSH key already added to your GitHub account).
+
+Nothing to commit / "working tree clean"
+  Means git already sees these files as committed (e.g., if you committed them
+  some other way already) — double check with `git log -3 --stat` to confirm
+  the changes above are actually in the history.
+
+Accidentally staged .env or venv/.venv
+  Should not happen since .gitignore already lists them, but if `git status`
+  ever shows .env staged, unstage it before committing:
+    git restore --staged .env
+
+GOING FORWARD
+--------------
+Repeat steps 1-5 above any time you want to push new changes. If you add new
+dependencies, update requirements.txt and mention it in the commit message so
+anyone pulling the repo knows to re-run `pip install -r requirements.txt`.

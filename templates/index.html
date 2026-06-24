@@ -375,6 +375,16 @@
         <div id="eco-ts" class="eco-ts"></div>
         <span class="eco-refresh" onclick="loadEcoCalendar(true)">↻ Refresh</span>
       </div>
+
+      <p class="sec-label" style="margin-top:14px;">MarketWatch (scraped, secondary)</p>
+      <div class="eco-panel calm" id="mw-eco-panel">
+        <div class="eco-loading" id="mw-eco-loading">
+          <div class="eco-spinner"></div> Loading calendar…
+        </div>
+        <div id="mw-eco-content" style="display:none;"></div>
+        <div id="mw-eco-ts" class="eco-ts"></div>
+        <span class="eco-refresh" onclick="loadMwEcoCalendar(true)">↻ Refresh</span>
+      </div>
     </div>
   </div>
 
@@ -955,6 +965,51 @@ function renderEco(parsed, panel, content, loading, tsEl, ts) {
   tsEl.textContent = 'Updated ' + ts.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) + srcNote;
 }
 
+// ── MarketWatch (scraped) Economic Calendar — secondary, additive panel ─────
+// Calls /api/eco-calendar-scraped. Kept fully separate from loadEcoCalendar()
+// above: if this fails, it shows a quiet message in its own panel only and
+// never touches the primary eco-panel. No auto-retry — just refetches on
+// page load / manual refresh, same as the primary panel, so MarketWatch
+// isn't hit repeatedly.
+async function loadMwEcoCalendar(forceRefresh) {
+  var panel   = document.getElementById('mw-eco-panel');
+  var loading = document.getElementById('mw-eco-loading');
+  var content = document.getElementById('mw-eco-content');
+  var tsEl    = document.getElementById('mw-eco-ts');
+
+  var CACHE_KEY = 'mw_eco_cal_flask_cache';
+  if (!forceRefresh) {
+    try {
+      var cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        var obj = JSON.parse(cached);
+        if (Date.now() - obj.ts < 6 * 60 * 60 * 1000) {
+          renderEco(obj.data, panel, content, loading, tsEl, new Date(obj.ts));
+          return;
+        }
+      }
+    } catch(e) {}
+  }
+
+  loading.style.display = 'flex';
+  content.style.display = 'none';
+
+  try {
+    var resp = await fetch('/api/eco-calendar-scraped');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var parsed = await resp.json();
+    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: parsed })); } catch(e) {}
+    renderEco(parsed, panel, content, loading, tsEl, new Date());
+  } catch(e) {
+    // Quiet fallback — no visible retry/status spinner, just a short note.
+    loading.style.display = 'none';
+    content.style.display = 'block';
+    panel.className = 'eco-panel calm';
+    content.innerHTML = '<div class="eco-summary" style="color:var(--text3);">MarketWatch data unavailable.</div>';
+    tsEl.textContent = '';
+  }
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
   // Load config from backend
@@ -970,6 +1025,7 @@ async function init() {
   setMode('ic');
   setSpotStatus('Manual entry required — SPX index quotes not available on free data tiers', 'warn');
   loadEcoCalendar(false);
+  loadMwEcoCalendar(false);
 }
 
 init();
