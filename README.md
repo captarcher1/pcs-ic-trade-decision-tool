@@ -47,6 +47,8 @@ The tool evaluates a trade through 10+ sequential checks, organized into market-
 
 **Economic calendar**
 - When Finnhub is set as the data source, the sidebar fetches this week's US macro events (FOMC, CPI, NFP, PPI, PCE, etc.) and classifies them by impact. High-impact weeks show a red ALERT banner; moderate weeks show WARN.
+- **Finnhub paywall change (2026):** Finnhub moved its economic-calendar endpoint behind a paid plan — it's no longer available on the free tier. If the live Finnhub call fails for this (or any other) reason, the app automatically falls back to a hardcoded, manually-sourced 2026 macro calendar (`data/eco_calendar_2026.py` — FOMC, CPI, NFP, PPI, GDP, PCE dates) so the panel keeps working without a paid key. The fallback is silent — the panel just keeps showing events, classified the same way as live data.
+- **Second, independent panel:** A separate "MarketWatch (scraped)" panel (`/api/eco-calendar-scraped`, backed by `data/eco_scraper_marketwatch.py`) scrapes MarketWatch's public economic calendar as an additional cross-check. It's fully isolated from the panel above — a scrape failure there shows a quiet "unavailable" message and never affects `/api/eco-calendar`.
 
 ---
 
@@ -61,7 +63,9 @@ pcs-ic-trade-decisionmaker/
 ├── README.md               # This file
 ├── data/
 │   ├── __init__.py
-│   └── data_fetcher.py     # Multi-source market data abstraction layer
+│   ├── data_fetcher.py             # Multi-source market data abstraction layer
+│   ├── eco_calendar_2026.py        # Hardcoded 2026 macro calendar — fallback when Finnhub fails
+│   └── eco_scraper_marketwatch.py  # MarketWatch scraper — secondary, additive eco panel
 └── templates/
     └── index.html          # Single-page frontend (served by Flask)
 ```
@@ -108,7 +112,7 @@ python app.py
 4. Fill in VIX, ATR(5), and IV Rank (manual entry or fetched via `/api/market-data`).
 5. Set trade parameters: DTE, trend vs 20 EMA, Monday gap observation, account size, wing widths, and credits received.
 6. Read the verdict at the top. Scroll down to review each filter step, the strike map, and the expectancy table.
-7. Check the economic events panel on the right (requires Finnhub as data source).
+7. Check the economic events panel on the right. With `DATA_SOURCE=finnhub`, this shows live Finnhub events if your key has calendar access, or the hardcoded 2026 fallback calendar if not (e.g., free-tier keys, since Finnhub moved this endpoint behind a paid plan). A second "MarketWatch (scraped)" panel runs independently alongside it regardless of data source.
 
 ---
 
@@ -119,9 +123,11 @@ Edit `DATA_SOURCE` in your `.env` file to switch providers. Only the API key for
 | Source | Key Required | Spot Price | VIX | ATR(5) | Eco Calendar | Notes |
 |---|---|---|---|---|---|---|
 | `yfinance` | No | ETFs/stocks | Yes (^VIX) | Yes | No | Default. Best for quick start. Index spot not available. |
-| `finnhub` | Yes (free) | ETFs/stocks | Yes | Yes | **Yes** | Only source with free economic calendar. |
+| `finnhub` | Yes (free) | ETFs/stocks | Yes | Yes | **Fallback*** | Live calendar now requires a paid Finnhub plan; free-tier keys automatically get the hardcoded 2026 fallback calendar instead. |
 | `alphavantage` | Yes (free) | ETFs/stocks | Yes | Yes | No | Free tier limited to 5 req/min; 25 req/day on basic. |
 | `polygon` | Yes (paid) | ETFs/stocks | Yes | Yes | Paid tier only | Best data quality; economic calendar needs Starter+ plan. |
+
+\* As of 2026, Finnhub's economic-calendar endpoint is paid-tier only. If your key doesn't have access, `/api/eco-calendar` transparently falls back to `data/eco_calendar_2026.py` instead of erroring — see "Economic calendar" under Logic Summary above. The separate `/api/eco-calendar-scraped` panel (MarketWatch) is available regardless of `DATA_SOURCE`.
 
 **Index tickers (SPX, XSP, NDX, RUT):** Real-time index quotes are not available on any free data tier. Enter the spot price manually for these tickers regardless of data source.
 
@@ -144,7 +150,8 @@ The Flask backend exposes the following endpoints (useful for scripting or integ
 | `/` | GET | — | HTML UI |
 | `/api/spot` | GET | `ticker` | `{ price, change_pct, source, timestamp }` |
 | `/api/market-data` | GET | `ticker` | `{ spot, vix, atr5, source, timestamp }` |
-| `/api/eco-calendar` | GET | — | `{ alertLevel, headline, reason, events[], source, timestamp }` |
+| `/api/eco-calendar` | GET | — | `{ alertLevel, headline, reason, events[], source, timestamp }` — Finnhub if your key has calendar access, else the hardcoded 2026 fallback |
+| `/api/eco-calendar-scraped` | GET | — | Same shape as above, sourced by scraping MarketWatch. Independent of `DATA_SOURCE`; never affects `/api/eco-calendar`. |
 | `/api/config` | GET | — | `{ data_source, eco_calendar_available }` |
 
 ---
