@@ -10,7 +10,6 @@ GET  /                              → Render templates/index.html
 GET  /api/spot?ticker=SPY           → Spot price + % change
 GET  /api/market-data?ticker=SPY    → Spot + VIX + ATR(5)
 GET  /api/eco-calendar              → This week's US economic events (Finnhub, with hardcoded 2026 fallback)
-GET  /api/eco-calendar-scraped      → This week's US economic events (MarketWatch scrape, secondary panel)
 
 Configuration
 -------------
@@ -29,7 +28,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 load_dotenv()
 
 from data.data_fetcher import get_spot, get_market_data, get_eco_calendar
-from data.eco_scraper_marketwatch import get_mw_eco_calendar
 
 app = Flask(__name__)
 
@@ -107,29 +105,6 @@ def api_eco_calendar():
     """
     try:
         data = get_eco_calendar()
-        return jsonify(data)
-    except Exception as e:
-        return _error(str(e), 502)
-
-
-@app.route("/api/eco-calendar-scraped")
-def api_eco_calendar_scraped():
-    """
-    GET /api/eco-calendar-scraped
-
-    Secondary, additive economic-calendar source — scrapes MarketWatch
-    (data/eco_scraper_marketwatch.py) instead of using Finnhub/the
-    hardcoded 2026 fallback. Kept on its own route and its own data
-    module on purpose: a scrape failure here must never affect
-    /api/eco-calendar above.
-
-    get_mw_eco_calendar() never raises — it always returns a dict in the
-    standard { alertLevel, headline, reason, events[], source, timestamp }
-    shape, falling back to a quiet "unavailable" response on any scrape
-    failure. The try/except below is just a defensive backstop.
-    """
-    try:
-        data = get_mw_eco_calendar()
         return jsonify(data)
     except Exception as e:
         return _error(str(e), 502)

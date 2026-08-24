@@ -12,6 +12,10 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Auto-start automation (start_pcs_ic.bat / stop_pcs_ic.bat)
+pcs_ic.pid
+logs/
+
 # macOS
 .DS_Store
 

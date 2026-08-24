@@ -209,9 +209,46 @@
   /* Disclaimer */
   .disclaimer { margin-top: 1.5rem; padding: 14px 18px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; font-size: 11px; line-height: 1.6; color: var(--text3); text-align: center; }
   .disclaimer-title { font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; font-size: 10px; }
+
+  /* Disclaimer modal (entry gate, shown once per browser unless dismissed) */
+  body.dmodal-open { overflow: hidden; }
+  .dmodal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+  .dmodal { background: var(--bg); border: 1px solid var(--border2); border-radius: 14px; max-width: 560px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 26px 28px 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .dmodal h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+  .dmodal-lead { font-size: 13px; font-weight: 600; color: var(--blue-text); margin-bottom: 14px; line-height: 1.5; }
+  .dmodal p { font-size: 12.5px; line-height: 1.6; color: var(--text2); margin-bottom: 10px; }
+  .dmodal-agree-line { font-size: 12.5px; line-height: 1.6; color: var(--text); font-weight: 600; margin: 14px 0 4px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .dmodal-checkbox-row { display: flex; align-items: center; gap: 8px; margin: 14px 0 16px; font-size: 12px; color: var(--text2); cursor: pointer; user-select: none; }
+  .dmodal-checkbox-row input { width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+  .dmodal-agree-btn { width: 100%; padding: 12px 0; font-size: 14px; font-weight: 700; border: none; border-radius: 9px; background: var(--blue-border); color: #fff; cursor: pointer; transition: opacity .15s; font-family: inherit; }
+  .dmodal-agree-btn:hover { opacity: 0.88; }
+  .dmodal-footnote { font-size: 10.5px; color: var(--text3); text-align: center; margin-top: 12px; }
 </style>
 </head>
 <body>
+<div id="dmodal-backdrop" class="dmodal-backdrop" style="display:none;">
+  <div class="dmodal" role="dialog" aria-modal="true" aria-labelledby="dmodal-title">
+    <h2 id="dmodal-title">Please read before continuing</h2>
+    <div class="dmodal-lead">The Put Credit Spread / Iron Condor Trade Decisioning Tool is an educational, rule-based pre-trade checklist — not financial advice.</div>
+
+    <p>This tool was built by a hobbyist with no financial, tax, legal, or investment credentials. It exists to apply a structured, rule-based checklist to options trade setups, and it may contain errors or wrong assumptions.</p>
+    <p>It provides no investment, tax, or legal advice and recommends no securities, strikes, or trading strategies.</p>
+    <p>Every verdict is an estimate from a simplified model — fixed probability-of-profit assumptions, no real-time bid-ask spreads, Greeks, or liquidity depth. Verify anything important with a qualified professional, and against your own broker's live data, before acting on it.</p>
+    <p>Your trade parameters — account size, credits, wing widths, contracts, and so on — are evaluated entirely in your own browser and never leave your computer. Only the ticker symbol you enter is sent out, to your locally running server and then to whichever market-data provider you've configured, to fetch a live quote.</p>
+    <p>Provided as-is, with no warranty of accuracy or fitness for any purpose. You use it entirely at your own risk.</p>
+
+    <div class="dmodal-agree-line">I understand this is an educational tool, not financial advice, and I will verify important decisions independently.</div>
+
+    <label class="dmodal-checkbox-row">
+      <input type="checkbox" id="dmodal-dont-show">
+      Don't show this again
+    </label>
+
+    <button class="dmodal-agree-btn" onclick="acknowledgeDisclaimer()">I understand and agree</button>
+
+    <div class="dmodal-footnote">You can see this notice again anytime by clearing your browser's stored data for this page.</div>
+  </div>
+</div>
 <div class="container">
   <h1>Put Credit Spread / Iron Condor Trade Decisioning Tool <span id="source-label" class="source-badge">yfinance</span></h1>
   <p class="subtitle">Iron Condor &amp; Put Credit Spread — live go/no-go validator</p>
@@ -375,16 +412,6 @@
         <div id="eco-ts" class="eco-ts"></div>
         <span class="eco-refresh" onclick="loadEcoCalendar(true)">↻ Refresh</span>
       </div>
-
-      <p class="sec-label" style="margin-top:14px;">MarketWatch (scraped, secondary)</p>
-      <div class="eco-panel calm" id="mw-eco-panel">
-        <div class="eco-loading" id="mw-eco-loading">
-          <div class="eco-spinner"></div> Loading calendar…
-        </div>
-        <div id="mw-eco-content" style="display:none;"></div>
-        <div id="mw-eco-ts" class="eco-ts"></div>
-        <span class="eco-refresh" onclick="loadMwEcoCalendar(true)">↻ Refresh</span>
-      </div>
     </div>
   </div>
 
@@ -419,6 +446,32 @@ var APP_CONFIG = { data_source: 'yfinance', eco_calendar_available: false };
 
 // Tickers that require manual spot entry (no free real-time index feed)
 var INDEX_TICKERS = ['SPX', 'XSP', 'NDX', 'RUT'];
+
+// ── Entry disclaimer modal ────────────────────────────────────────────────────
+var DMODAL_KEY = 'pcsIcTool.disclaimerAcknowledged';
+
+function showDisclaimerIfNeeded() {
+  var seen = false;
+  try { seen = localStorage.getItem(DMODAL_KEY) === '1'; } catch (e) {}
+  if (seen) return;
+  var el = document.getElementById('dmodal-backdrop');
+  if (el) {
+    el.style.display = 'flex';
+    document.body.classList.add('dmodal-open');
+  }
+}
+
+function acknowledgeDisclaimer() {
+  var dontShow = document.getElementById('dmodal-dont-show');
+  if (dontShow && dontShow.checked) {
+    try { localStorage.setItem(DMODAL_KEY, '1'); } catch (e) {}
+  }
+  var el = document.getElementById('dmodal-backdrop');
+  if (el) el.style.display = 'none';
+  document.body.classList.remove('dmodal-open');
+}
+
+showDisclaimerIfNeeded();
 
 function isDark() {
   return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -965,51 +1018,6 @@ function renderEco(parsed, panel, content, loading, tsEl, ts) {
   tsEl.textContent = 'Updated ' + ts.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) + srcNote;
 }
 
-// ── MarketWatch (scraped) Economic Calendar — secondary, additive panel ─────
-// Calls /api/eco-calendar-scraped. Kept fully separate from loadEcoCalendar()
-// above: if this fails, it shows a quiet message in its own panel only and
-// never touches the primary eco-panel. No auto-retry — just refetches on
-// page load / manual refresh, same as the primary panel, so MarketWatch
-// isn't hit repeatedly.
-async function loadMwEcoCalendar(forceRefresh) {
-  var panel   = document.getElementById('mw-eco-panel');
-  var loading = document.getElementById('mw-eco-loading');
-  var content = document.getElementById('mw-eco-content');
-  var tsEl    = document.getElementById('mw-eco-ts');
-
-  var CACHE_KEY = 'mw_eco_cal_flask_cache';
-  if (!forceRefresh) {
-    try {
-      var cached = sessionStorage.getItem(CACHE_KEY);
-      if (cached) {
-        var obj = JSON.parse(cached);
-        if (Date.now() - obj.ts < 6 * 60 * 60 * 1000) {
-          renderEco(obj.data, panel, content, loading, tsEl, new Date(obj.ts));
-          return;
-        }
-      }
-    } catch(e) {}
-  }
-
-  loading.style.display = 'flex';
-  content.style.display = 'none';
-
-  try {
-    var resp = await fetch('/api/eco-calendar-scraped');
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    var parsed = await resp.json();
-    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: parsed })); } catch(e) {}
-    renderEco(parsed, panel, content, loading, tsEl, new Date());
-  } catch(e) {
-    // Quiet fallback — no visible retry/status spinner, just a short note.
-    loading.style.display = 'none';
-    content.style.display = 'block';
-    panel.className = 'eco-panel calm';
-    content.innerHTML = '<div class="eco-summary" style="color:var(--text3);">MarketWatch data unavailable.</div>';
-    tsEl.textContent = '';
-  }
-}
-
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
   // Load config from backend
@@ -1025,7 +1033,6 @@ async function init() {
   setMode('ic');
   setSpotStatus('Manual entry required — SPX index quotes not available on free data tiers', 'warn');
   loadEcoCalendar(false);
-  loadMwEcoCalendar(false);
 }
 
 init();

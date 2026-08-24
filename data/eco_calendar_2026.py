@@ -145,6 +145,14 @@ _SOURCED_EVENTS = [
     (PCE_DATES,  "PCE (Personal Income and Outlays)"),
 ]
 
+# Last date actually covered by the sourced lists above, derived from the
+# data itself rather than a separate hardcoded literal — so this can never
+# drift out of sync when the *_DATES lists are extended for a future year.
+# data_fetcher.py compares the requested week against this to know whether
+# the sourced calendar (FOMC/CPI/NFP/PPI/GDP/PCE) actually has coverage for
+# that week, or whether it's silently returning nothing for those series.
+COVERAGE_END = max(d for date_list, _ in _SOURCED_EVENTS for d in date_list)
+
 
 def get_events(week_mon: datetime.date, week_fri: datetime.date) -> list:
     """

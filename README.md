@@ -48,6 +48,7 @@ The tool evaluates a trade through 10+ sequential checks, organized into market-
 **Economic calendar**
 - When Finnhub is set as the data source, the sidebar fetches this week's US macro events (FOMC, CPI, NFP, PPI, PCE, etc.) and classifies them by impact. High-impact weeks show a red ALERT banner; moderate weeks show WARN.
 - **Finnhub paywall change (2026):** Finnhub moved its economic-calendar endpoint behind a paid plan — it's no longer available on the free tier. If the live Finnhub call fails for this (or any other) reason, the app automatically falls back to a hardcoded, manually-sourced 2026 macro calendar (`data/eco_calendar_2026.py` — FOMC, CPI, NFP, PPI, GDP, PCE dates) so the panel keeps working without a paid key. The fallback is silent — the panel just keeps showing events, classified the same way as live data.
+- **"This week" is always computed from today's real date**, never a hardcoded year — `_get_week_bounds()` in `data/data_fetcher.py` derives it from `datetime.date.today()`. What's fixed is the underlying *data*: the FOMC/CPI/NFP/PPI/GDP/PCE dates in `data/eco_calendar_2026.py` are real, individually-sourced release dates (not something a formula can predict for future years), and currently run through `COVERAGE_END` (derived automatically from the latest date in those lists — currently late Dec 2026). If the fallback is ever asked for a week past that, it doesn't silently look calmer than it should: the panel's headline switches to "⚠ Calendar data may be incomplete this week" and the reason text says so explicitly, while still showing the one entry that *is* computed rather than sourced (the weekly Thursday jobless-claims release). **Maintenance:** each fall, when next year's release schedules are published, extend the `*_DATES` lists in `data/eco_calendar_2026.py` and bump `LAST_VERIFIED` — `COVERAGE_END` updates itself from the new data, nothing else to change.
 - **Second, independent panel:** A separate "MarketWatch (scraped)" panel (`/api/eco-calendar-scraped`, backed by `data/eco_scraper_marketwatch.py`) scrapes MarketWatch's public economic calendar as an additional cross-check. It's fully isolated from the panel above — a scrape failure there shows a quiet "unavailable" message and never affects `/api/eco-calendar`.
 
 ---
@@ -61,13 +62,18 @@ pcs-ic-trade-decisionmaker/
 ├── .env.example            # Template for .env — safe to share
 ├── requirements.txt        # Python dependencies
 ├── README.md               # This file
+├── start_pcs_ic.bat        # Windows: auto-start script (idempotent — safe to run anytime)
+├── stop_pcs_ic.bat         # Windows: manual shutdown script (no scheduled trigger by default)
+├── pcs_ic_launch.ps1       # Helper used by start_pcs_ic.bat to launch app.py hidden and capture its PID
+├── pcs_ic.pid              # Auto-created/deleted at runtime — tracks the running Flask process (gitignored)
+├── logs/                   # Auto-created — start/stop/app stdout+stderr logs (gitignored)
 ├── data/
 │   ├── __init__.py
 │   ├── data_fetcher.py             # Multi-source market data abstraction layer
 │   ├── eco_calendar_2026.py        # Hardcoded 2026 macro calendar — fallback when Finnhub fails
 │   └── eco_scraper_marketwatch.py  # MarketWatch scraper — secondary, additive eco panel
 └── templates/
-    └── index.html          # Single-page frontend (served by Flask)
+    └── index.html          # Single-page frontend (served by Flask) — includes the entry disclaimer modal
 ```
 
 ---
@@ -81,9 +87,9 @@ pcs-ic-trade-decisionmaker/
 cd pcs-ic-trade-decisionmaker
 
 # 2. (Recommended) Create a virtual environment
-python -m venv venv
-source venv/bin/activate        # macOS/Linux
-venv\Scripts\activate           # Windows
+python -m venv .venv
+source .venv/bin/activate       # macOS/Linux
+.venv\Scripts\activate          # Windows
 
 # 3. Install dependencies
 pip install -r requirements.txt
@@ -105,6 +111,8 @@ python app.py
 # http://localhost:5057
 ```
 
+**First run in a browser:** a disclaimer modal appears before anything else — read it and click **I understand and agree** to continue. Check **Don't show this again** first if you don't want it to reappear on future visits from the same browser (it's remembered via `localStorage`, per-browser — see "Disclaimer modal" below).
+
 **Workflow:**
 1. Pick mode — Iron Condor or Put Credit Spread.
 2. Enter your ticker (SPX, SPY, NDX, QQQ, RUT, IWM, or any equity).
@@ -113,6 +121,66 @@ python app.py
 5. Set trade parameters: DTE, trend vs 20 EMA, Monday gap observation, account size, wing widths, and credits received.
 6. Read the verdict at the top. Scroll down to review each filter step, the strike map, and the expectancy table.
 7. Check the economic events panel on the right. With `DATA_SOURCE=finnhub`, this shows live Finnhub events if your key has calendar access, or the hardcoded 2026 fallback calendar if not (e.g., free-tier keys, since Finnhub moved this endpoint behind a paid plan). A second "MarketWatch (scraped)" panel runs independently alongside it regardless of data source.
+
+---
+
+## Disclaimer modal
+
+The tool shows a one-time "Please read before continuing" modal the first time it's opened in a given browser, gating the page until you click **I understand and agree**. This is separate from — and in addition to — the always-visible Disclaimer footer at the bottom of the page.
+
+- **Persistence:** if you check **Don't show this again**, that choice is saved to the browser's `localStorage` (key `pcsIcTool.disclaimerAcknowledged`), scoped to `http://localhost:5057` (or whatever host/port you run this on). It's per-browser, not per-user-account — a different browser, a private/incognito window, or clearing this site's data will show the notice again.
+- **What it actually claims:** the modal states that your trade parameters (account size, credits, wing widths, contracts, etc.) are evaluated entirely client-side and never leave your computer, and that only the ticker symbol is sent out — to your local Flask server, then to your configured market-data provider — to fetch a live quote. This matches how the app is actually built: `calc()` in `templates/index.html` runs the whole filter/expectancy pipeline in the browser; the only network calls are `/api/spot`, `/api/market-data` (both take just `ticker`), and `/api/eco-calendar` (no params at all).
+- **Where it lives:** `templates/index.html` — the modal markup is right after `<body>`, styles are under `/* Disclaimer modal */` in the `<style>` block, and the show/dismiss logic (`showDisclaimerIfNeeded()` / `acknowledgeDisclaimer()`) is near the top of the main `<script>` block.
+
+---
+
+## Automation (Windows — auto start / stop)
+
+Two scripts handle starting the app in the background, idempotently, with no visible console window — same pattern used for the summer-os project, adapted here.
+
+| Script | Purpose |
+|--------|---------|
+| `start_pcs_ic.bat` | Starts the Flask app if not already running. Idempotent — safe to fire multiple times or from multiple triggers at once. |
+| `stop_pcs_ic.bat` | Stops the app via its recorded PID. Manual use only — no scheduled trigger calls this by default (see below). Safe if the app is already stopped. |
+
+Logs are written to `logs\pcs_ic_start.log`, `logs\pcs_ic_stop.log`, `logs\pcs_ic_app.log`, and `logs\pcs_ic_app_err.log` (folder auto-created).
+
+**Detection is PID-file based** (`pcs_ic.pid`), not port-based — same reasoning as summer-os: a self-managed PID file can't be fooled by something unrelated occupying the port, whereas a port check can (that's exactly what happened with Tailscale on the summer-os project). There's no known equivalent conflict on port 5057 here, but there's no cost to using the safer mechanism regardless.
+
+**No scheduled stop trigger.** Unlike summer-os (which has a nightly auto-stop for screen-time reasons), this tool has no natural "should stop now" moment, so only start triggers are set up below. Run `stop_pcs_ic.bat` manually any time — e.g. before pulling code changes and restarting.
+
+### Wiring up Task Scheduler
+
+Open **PowerShell as Administrator** and run the commands below. Replace `C:\path\to\pcs-ic-trade-decisionmaker` with your actual project folder path in each command.
+
+**A note on quoting:** these commands are written for PowerShell, not `cmd.exe` — the two escape embedded quotes differently. `\"..\"` (cmd-style) is what you'd use in a `.bat` file or Command Prompt; typed directly into PowerShell it gets misparsed and `schtasks` reports "Invalid argument/option." Since none of the path segments below contain spaces, the simplest fix is to just not quote the `/TR` value's path at all — that's what's used below. (If you ever move this project somewhere with a space in the path, wrap it in PowerShell's own escape instead: `` /TR "`"C:\path with spaces\start_pcs_ic.bat`"" ``.)
+
+**1 — Auto-start at system logon**
+```powershell
+schtasks /Create /TN "PCS-IC\Start At Logon" /TR C:\path\to\pcs-ic-trade-decisionmaker\start_pcs_ic.bat /SC ONLOGON /RU SYSTEM /F
+```
+
+**2 — Auto-start at system startup**
+```powershell
+schtasks /Create /TN "PCS-IC\Start At Startup" /TR C:\path\to\pcs-ic-trade-decisionmaker\start_pcs_ic.bat /SC ONSTART /RU SYSTEM /F
+```
+
+**3 — Daily fallback start (safety net)**
+
+Logon/startup triggers only fire on an actual logon or cold boot — if the machine just sleeps/locks instead, neither refires. A daily trigger closes that gap the same way it does for summer-os:
+```powershell
+schtasks /Create /TN "PCS-IC\Start 6AM" /TR C:\path\to\pcs-ic-trade-decisionmaker\start_pcs_ic.bat /SC DAILY /ST 06:00 /RU SYSTEM /F
+```
+
+To verify all three tasks were created:
+```powershell
+schtasks /Query /TN "PCS-IC" /FO LIST
+```
+
+To remove all PCS-IC tasks if needed:
+```powershell
+schtasks /Delete /TN "PCS-IC" /F
+```
 
 ---
 

@@ -275,8 +275,19 @@ def _eco_hardcoded_2026():
 
     Reuses _classify_event() / _build_eco_response() so the output shape
     and impact rules are identical to every other source in this file.
+
+    Note on "the year": the requested week is always the REAL current week —
+    _get_week_bounds() derives it from datetime.date.today(), never from a
+    hardcoded year, so this keeps working correctly no matter what year the
+    app is actually run in. What IS fixed is the underlying calendar DATA in
+    eco_calendar_2026.py: those are real, individually-sourced release dates
+    (Fed/BLS/BEA), not something a formula can compute for future years, and
+    they currently only go through COVERAGE_END. If the current week is past
+    that, the sourced events (FOMC/CPI/NFP/PPI/GDP/PCE) simply won't be in
+    the list — see the coverage check below, which makes that gap visible
+    instead of letting the panel quietly look calmer than it should.
     """
-    from data.eco_calendar_2026 import get_events
+    from data.eco_calendar_2026 import get_events, COVERAGE_END
 
     mon_str, fri_str = _get_week_bounds()
     week_mon = datetime.date.fromisoformat(mon_str)
@@ -291,7 +302,19 @@ def _eco_hardcoded_2026():
         d = e["date"]
         events.append({"day": DAY_LABELS[d.weekday() + 1], "name": e["name"], "impact": imp})
 
-    return _build_eco_response(events, "hardcoded-2026")
+    resp = _build_eco_response(events, "hardcoded-2026")
+
+    if week_fri > COVERAGE_END:
+        resp["headline"] = "⚠ Calendar data may be incomplete this week"
+        resp["reason"] = (
+            f"Sourced calendar data only covers through {COVERAGE_END.isoformat()}. "
+            "FOMC/CPI/NFP/PPI/GDP/PCE dates for this week have not been added to "
+            "data/eco_calendar_2026.py yet — only the weekly jobless-claims release "
+            "(computed, not sourced) is shown below. Check the Fed, BLS, and BEA "
+            "release calendars manually before trading this week. "
+        ) + resp["reason"]
+
+    return resp
 
 
 # ─────────────────────────────────────────────
