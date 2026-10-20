@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Put Credit Spread / Iron Condor Trade Decisioning Tool</title>
+<script>try{var _t=localStorage.getItem('pcsIcTool.theme');if(_t==='light'||_t==='dark')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
 <style>
   :root {
     --bg: #ffffff;
@@ -11,8 +12,8 @@
     --border: rgba(0,0,0,0.12);
     --border2: rgba(0,0,0,0.22);
     --text: #1a1a18;
-    --text2: #5a5a56;
-    --text3: #8a8a85;
+    --text2: #4a4a46;
+    --text3: #6e6e69;
     --green-bg: #e1f5ee;
     --green-border: #1D9E75;
     --green-text: #085041;
@@ -26,16 +27,45 @@
     --blue-border: #378ADD;
     --blue-text: #0C447C;
     --purple-text: #534AB7;
+    --outline: #2b2b28;
+    --heading: #000000;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
+  /* Dark theme: used when the visitor picks it (data-theme="dark"), or when they have not picked and the system is dark */
+  :root[data-theme="dark"] {
       --bg: #1e1e1c;
       --bg2: #2a2a27;
       --border: rgba(255,255,255,0.10);
       --border2: rgba(255,255,255,0.22);
       --text: #e8e8e2;
       --text2: #a8a8a0;
-      --text3: #6a6a64;
+      --text3: #9a9a92;
+      --green-bg: #0a2e1f;
+      --green-border: #1D9E75;
+      --green-text: #5DCAA5;
+      --red-bg: #2e0f0f;
+      --red-border: #E24B4A;
+      --red-text: #F09595;
+      --amber-bg: #2e1f06;
+      --amber-border: #BA7517;
+      --amber-text: #FAC775;
+      --blue-bg: #0a1e30;
+      --blue-border: #378ADD;
+      --blue-text: #85B7EB;
+      --purple-text: #AFA9EC;
+      --outline: rgba(255,255,255,0.55);
+      --heading: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --outline: rgba(255,255,255,0.55);
+      --heading: #ffffff;
+      --bg: #1e1e1c;
+      --bg2: #2a2a27;
+      --border: rgba(255,255,255,0.10);
+      --border2: rgba(255,255,255,0.22);
+      --text: #e8e8e2;
+      --text2: #a8a8a0;
+      --text3: #9a9a92;
       --green-bg: #0a2e1f;
       --green-border: #1D9E75;
       --green-text: #5DCAA5;
@@ -85,17 +115,25 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .eco-refresh { font-size: 10px; color: var(--text3); margin-top: 8px; cursor: pointer; text-decoration: underline; display: inline-block; }
   .eco-ts { font-size: 9px; color: var(--text3); margin-top: 6px; }
-  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
-  .subtitle { font-size: 13px; color: var(--text3); margin-bottom: 1.5rem; }
-  .sec-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin: 1.4rem 0 0.55rem; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; color: var(--heading); }
+  .title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .theme-btn { border: 1px solid var(--outline); background: var(--bg); color: var(--text); border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+  .theme-btn:hover { background: var(--bg2); }
+  .subtitle { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+  .clock { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+  .mkt { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 20px; border: 1px solid var(--outline); }
+  .mkt.open   { background: var(--green-bg); color: var(--green-text); border-color: var(--green-border); }
+  .mkt.closed { background: var(--red-bg);   color: var(--red-text);   border-color: var(--red-border); }
+  .built-by { margin-top: 10px; text-align: center; font-size: 11px; color: var(--text2); }
+  .sec-label { font-size: 11px; font-weight: 700; color: var(--heading); text-transform: uppercase; letter-spacing: .06em; margin: 1.4rem 0 0.55rem; }
 
   .mode-toggle { display: flex; gap: 6px; margin-bottom: 1.25rem; }
-  .mode-btn { flex: 1; padding: 9px 0; font-size: 13px; font-weight: 500; border: 1px solid var(--border2); border-radius: 8px; background: transparent; color: var(--text2); cursor: pointer; transition: all .15s; }
+  .mode-btn { flex: 1; padding: 9px 0; font-size: 13px; font-weight: 500; border: 1px solid var(--outline); border-radius: 8px; background: transparent; color: var(--text2); cursor: pointer; transition: all .15s; }
   .mode-btn.active { background: var(--blue-bg); border-color: var(--blue-border); color: var(--blue-text); }
 
   .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 0.75rem; }
-  .icard { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; }
-  .ilabel { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+  .icard { background: var(--bg); border: 1px solid var(--outline); border-radius: 10px; padding: 11px 13px; }
+  .ilabel { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
   .icard input[type=number] { width: 100%; border: none; background: transparent; font-size: 18px; font-weight: 600; color: var(--text); outline: none; padding: 0; font-family: inherit; }
   .icard input[type=number]::-webkit-outer-spin-button, .icard input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
   .icard select { width: 100%; border: none; background: transparent; font-size: 13px; font-weight: 500; color: var(--text); outline: none; padding: 0; cursor: pointer; font-family: inherit; }
@@ -115,15 +153,15 @@
   .vlabel.caution { color: var(--amber-text); }
   .vsub { font-size: 13px; color: var(--text2); margin-top: 4px; }
 
-  .viz-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 0.85rem; }
-  .viz-title { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+  .viz-card { background: var(--bg); border: 1px solid var(--outline); border-radius: 10px; padding: 14px 16px; margin-bottom: 0.85rem; }
+  .viz-title { font-size: 11px; font-weight: 700; color: var(--heading); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
   #condor-svg { display: block; width: 100%; height: auto; }
 
-  .legs-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0.85rem; }
-  .leg-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .legs-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px; margin-bottom: 0.85rem; }
+  .leg-card { background: var(--bg); border: 1px solid var(--outline); border-radius: 10px; padding: 12px 14px; }
   .leg-card.put-side  { border-top: 3px solid #1D9E75; }
   .leg-card.call-side { border-top: 3px solid #E24B4A; }
-  .leg-card.combined  { border-top: 3px solid #7F77DD; grid-column: 1 / -1; }
+  .leg-card.combined  { border-top: 3px solid #7F77DD; }
   .leg-title { font-size: 12px; font-weight: 600; margin-bottom: 9px; }
   .leg-title.put   { color: var(--green-text); }
   .leg-title.call  { color: var(--red-text); }
@@ -140,10 +178,13 @@
   .combo-cell-l { font-size: 10px; color: var(--text3); margin-bottom: 3px; }
   .combo-cell-v { font-size: 14px; font-weight: 600; color: var(--text); }
 
-  .chk { display: flex; align-items: flex-start; gap: 9px; padding: 9px 12px; border-radius: 7px; margin-bottom: 5px; border: 1px solid transparent; }
-  .chk.pass    { background: var(--green-bg); border-color: rgba(29,158,117,0.2); }
-  .chk.fail    { background: var(--red-bg);   border-color: rgba(226,75,74,0.2); }
-  .chk.warn    { background: var(--amber-bg); border-color: rgba(186,117,23,0.2); }
+  .chk { display: flex; align-items: flex-start; gap: 9px; padding: 9px 12px; border-radius: 7px; margin-bottom: 0; border: 1px solid var(--outline); }
+  .chk.pass    { background: var(--green-bg); }
+  .chk.fail    { background: var(--red-bg); }
+  .chk.warn    { background: var(--amber-bg); }
+  #checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 980px) { #checks { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 620px) { #checks { grid-template-columns: 1fr; } }
   .chk-ic { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; }
   .ic-pass { background: #1D9E75; }
   .ic-fail { background: #E24B4A; }
@@ -155,10 +196,12 @@
   .chk-detail.fail { color: var(--red-text); }
   .chk-detail.warn { color: var(--amber-text); }
 
-  .exp-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 13px 15px; }
-  .exp-title { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
-  .exp-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-  .exp-row:last-child { border-bottom: none; padding-top: 8px; }
+  .exp-card { background: var(--bg); border: 1px solid var(--outline); border-radius: 10px; padding: 13px 15px; }
+  .exp-title { font-size: 11px; font-weight: 700; color: var(--heading); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+  .exp-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 900px) { .exp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 520px) { .exp-grid { grid-template-columns: 1fr; } }
+  .exp-row { display: flex; flex-direction: column; justify-content: space-between; gap: 3px; padding: 8px 10px; border: 1px solid var(--border2); border-radius: 8px; font-size: 13px; }
   .exp-l { color: var(--text2); }
   .exp-v { font-weight: 600; color: var(--text); }
   .exp-v.pos   { color: var(--green-text); }
@@ -166,8 +209,8 @@
   .exp-v.large { font-size: 16px; }
 
   /* Footnote — SPX benefits */
-  .footnote { margin-top: 2rem; padding: 16px 18px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; font-size: 12px; }
-  .footnote-title { font-size: 11px; font-weight: 700; color: var(--blue-text); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  .footnote { margin-top: 2rem; padding: 16px 18px; background: var(--bg); border: 1px solid var(--outline); border-radius: 10px; font-size: 12px; }
+  .footnote-title { font-size: 11px; font-weight: 700; color: var(--heading); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
   .footnote-row { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
   .footnote-row:last-of-type { border-bottom: none; }
   .footnote-num { font-weight: 700; color: var(--blue-text); min-width: 18px; }
@@ -177,7 +220,7 @@
 
   /* How to use */
   .howto { background: var(--blue-bg); border: 1px solid var(--blue-border); border-radius: 10px; padding: 14px 18px; margin-bottom: 1.5rem; }
-  .howto-title { font-size: 11px; font-weight: 700; color: var(--blue-text); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  .howto-title { font-size: 11px; font-weight: 700; color: var(--heading); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
   .howto-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
   .howto-step { display: flex; gap: 9px; font-size: 12px; line-height: 1.45; color: var(--blue-text); }
   .howto-num { background: var(--blue-border); color: #fff; font-weight: 700; font-size: 11px; width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
@@ -207,8 +250,8 @@
   #spot-refresh:hover { opacity: 0.7; }
 
   /* Disclaimer */
-  .disclaimer { margin-top: 1.5rem; padding: 14px 18px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; font-size: 11px; line-height: 1.6; color: var(--text3); text-align: center; }
-  .disclaimer-title { font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; font-size: 10px; }
+  .disclaimer { margin-top: 1.5rem; padding: 14px 18px; background: var(--bg2); border: 1px solid var(--outline); border-radius: 10px; font-size: 11px; line-height: 1.6; color: var(--text2); text-align: center; }
+  .disclaimer-title { font-weight: 700; color: var(--heading); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; font-size: 10px; }
 
   /* Disclaimer modal (entry gate, shown once per browser unless dismissed) */
   body.dmodal-open { overflow: hidden; }
@@ -223,6 +266,32 @@
   .dmodal-agree-btn { width: 100%; padding: 12px 0; font-size: 14px; font-weight: 700; border: none; border-radius: 9px; background: var(--blue-border); color: #fff; cursor: pointer; transition: opacity .15s; font-family: inherit; }
   .dmodal-agree-btn:hover { opacity: 0.88; }
   .dmodal-footnote { font-size: 10.5px; color: var(--text3); text-align: center; margin-top: 12px; }
+  /* Strike candidates */
+  .cand-card { background: var(--bg); border: 1px solid var(--outline); border-radius: 10px; padding: 14px 16px; margin-bottom: 0.85rem; }
+  .cand-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+  .cand-title { font-size:13px; font-weight:700; color:var(--heading); }
+  .cand-meta { font-size:12px; color:var(--text2); }
+  .cand-btn { border:1px solid var(--blue-border); background:transparent; color:var(--blue-text); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; min-height:34px; font-family:inherit; }
+  .cand-banner { font-size:12.5px; line-height:1.45; border-radius:8px; padding:8px 11px; margin-bottom:8px; background:var(--bg2); color:var(--text2); }
+  .cand-banner.warn { background:var(--amber-bg); color:var(--amber-text); border:1px solid var(--amber-border); }
+  .cand-banner.none { background:transparent; border:1.5px dashed var(--border2); color:var(--text); }
+  .cand-banner.err  { background:var(--red-bg); color:var(--red-text); border:1px solid var(--red-border); }
+  .cand-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table.cand { border-collapse:separate; border-spacing:0 4px; width:100%; min-width:560px; font-size:12.5px; font-variant-numeric:tabular-nums; }
+  table.cand th { font-size:11px; font-weight:500; color:var(--text3); text-align:right; padding:2px 8px; white-space:nowrap; }
+  table.cand td { text-align:right; padding:9px 8px; border-top:1px solid var(--outline); border-bottom:1px solid var(--outline); white-space:nowrap; }
+  table.cand td:first-child { border-left:1px solid var(--outline); border-radius:8px 0 0 8px; }
+  table.cand td:last-child { border-right:1px solid var(--outline); border-radius:0 8px 8px 0; }
+  table.cand tr.crow { cursor:pointer; }
+  table.cand tr.crow:hover td { background:var(--bg2); }
+  table.cand tr.crow.sel td { background:var(--blue-bg); border-color:var(--blue-border); }
+  table.cand tr.crow:focus { outline:none; }
+  table.cand tr.crow:focus-visible td { border-color:var(--blue-border); }
+  .cand-sep { border-left:2px solid var(--border2) !important; }
+  .cand-ok { color:var(--green-text); font-weight:600; }
+  .cand-low { color:var(--amber-text); font-weight:600; }
+  .cand-foot { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12px; color:var(--text2); border-top:1px solid var(--border); padding-top:8px; margin-top:4px; }
+  .qbox { font-size:11.5px; color:var(--text2); margin-top:3px; }
 </style>
 </head>
 <body>
@@ -250,17 +319,25 @@
   </div>
 </div>
 <div class="container">
-  <h1>Put Credit Spread / Iron Condor Trade Decisioning Tool <span id="source-label" class="source-badge">yfinance</span></h1>
-  <p class="subtitle">Iron Condor &amp; Put Credit Spread — live go/no-go validator</p>
+  <div class="title-row">
+    <h1>Put Credit Spread / Iron Condor Trade Decisioning Tool <span id="source-label" class="source-badge">yfinance</span></h1>
+    <button type="button" class="theme-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Switch between light and dark theme">🌙 Dark theme</button>
+  </div>
+  <p class="subtitle">
+    <span>Iron Condor &amp; Put Credit Spread — live go/no-go validator</span>
+    <span class="clock" id="clock"></span>
+    <span class="mkt closed" id="mkt" title="US equity hours 9:30 AM–4:00 PM ET, Mon–Fri. NYSE holidays through 2027 are built in; early closes are not.">Market is closed</span>
+  </p>
 
   <div class="howto">
     <div class="howto-title">How to use this tool</div>
     <div class="howto-steps">
-      <div class="howto-step"><span class="howto-num">1</span><div><b>Pick mode &amp; ticker.</b> Choose Iron Condor or Put Credit Spread. Enter the ticker (SPX, SPY, NDX, RUT, etc.) — strike rounding and tax footnote auto-adjust.</div></div>
-      <div class="howto-step"><span class="howto-num">2</span><div><b>Enter market inputs.</b> Fill in VIX, ATR(5), IV Rank, and current spot. Hit ↻ to auto-fetch via the configured data source.</div></div>
-      <div class="howto-step"><span class="howto-num">3</span><div><b>Set trade parameters.</b> DTE in weeks, trend vs 20 EMA, Monday gap, account size, wing widths, credits received, contracts.</div></div>
-      <div class="howto-step"><span class="howto-num">4</span><div><b>Check the verdict.</b> Top box shows GO / CAUTION / NO-GO. Scroll down to see each filter step, the strike map, and per-contract expectancy.</div></div>
-      <div class="howto-step"><span class="howto-num">5</span><div><b>Review economic events.</b> Right panel flags FOMC, CPI, NFP weeks. Avoid opening positions through high-impact releases.</div></div>
+      <div class="howto-step"><span class="howto-num">1</span><div><b>Pick mode &amp; ticker.</b> Choose Iron Condor or Put Credit Spread. Enter the ticker (SPX, SPY, NDX, RUT, a stock…). Spot price and (for SPX / XSP / SPY) IV Rank fill in by themselves, and strike rounding and the tax footnote adjust.</div></div>
+      <div class="howto-step"><span class="howto-num">2</span><div><b>Enter market inputs.</b> Type VIX and ATR(5). Check IV Rank and spot (↻ refreshes spot); you can overwrite either one.</div></div>
+      <div class="howto-step"><span class="howto-num">3</span><div><b>Set trade parameters.</b> DTE in weeks, trend vs 20 EMA, Monday gap, account size, wing width and contracts. Credits come from step 4, so you don't need to type them.</div></div>
+      <div class="howto-step"><span class="howto-num">4</span><div><b>Pick your strikes.</b> The Strike candidates table lists real strikes from the option chain (short delta 15 or lower) for your ticker and DTE. For an iron condor, choose how to pair the short strikes, then click a row. For a put credit spread, click a put row. Strikes and credits fill in (mid), with bid / mid / ask shown under the credit boxes.</div></div>
+      <div class="howto-step"><span class="howto-num">5</span><div><b>Check the verdict.</b> Top box shows GO / CAUTION / NO-GO. Scroll down for each filter step, the strike map and per-contract expectancy. Choose which POP to use (hard-coded or delta-implied).</div></div>
+      <div class="howto-step"><span class="howto-num">6</span><div><b>Review economic events.</b> Right panel flags FOMC, CPI, NFP, PPI, GDP and PCE weeks. Avoid opening positions through high-impact releases.</div></div>
     </div>
 
     <details class="howto-details">
@@ -268,29 +345,41 @@
       <div class="howto-detail-content">
         <p><strong>Verdict colors</strong></p>
         <p>
-          <span class="howto-badge go">GO</span> All hard filters pass. Trade it within your sized contracts.<br>
-          <span class="howto-badge caution">CAUTION</span> No hard fails, but one or more warnings (e.g. IVR 15–29%, VIX 20–25, credit below 10%). Review warnings before entering — reduce size or skip if multiple flags.<br>
-          <span class="howto-badge nogo">NO-GO</span> A critical filter failed (e.g. VIX ≥ 30, IVR &lt; 15%, Monday gap outside Friday range, DTE outside 21–35 days, expectancy negative). Do not trade.
+          <span class="howto-badge go">GO</span> All checks pass. Trade it within your sized contracts.<br>
+          <span class="howto-badge caution">CAUTION</span> No hard fails, but one or more warnings (e.g. IVR 15–29%, VIX 20–25, credit below 10% of max risk, thin or negative expectancy). Review the warnings before entering — reduce size or skip if there are several.<br>
+          <span class="howto-badge nogo">NO-GO</span> A critical check failed: VIX ≥ 25, IVR &lt; 15%, Monday gap outside Friday's range, or DTE outside 2–6 weeks. Do not trade.
         </p>
 
         <p><strong>Input definitions</strong></p>
         <p>
-          <strong>VIX</strong>: market-wide implied volatility. &lt;20 calm, 20–25 elevated, ≥25 caution, ≥30 hard stop.<br>
-          <strong>ATR(5)</strong>: 5-day average true range in points. Used with the multiplier and DTE to calculate safe strike distance.<br>
-          <strong>IV Rank</strong>: where current IV sits in its 1-year range (0–100%). Higher IVR = richer premium to sell. ≥30% passes, 15–29% warns, &lt;15% NO-GO.<br>
-          <strong>Trend vs 20 EMA</strong>: above EMA uses 1.5× multiplier (bullish bias); below EMA uses 2.0× (more cushion needed).<br>
-          <strong>Short-DTE boost</strong>: multiplier auto-increases by +0.5 at 1-week DTE and +0.3 at 2-week DTE to compensate for gamma risk.<br>
-          <strong>Monday gap</strong>: if today's open is inside Friday's range, the trade is tradable. Outside = skip (regime shift signal).
+          <strong>Ticker</strong>: the underlying. Spot fills in by itself (index quotes are delayed).<br>
+          <strong>VIX</strong>: market-wide implied volatility. &lt;20 calm, 20–25 elevated (caution), ≥25 NO-GO. Typed by you.<br>
+          <strong>ATR(5)</strong>: 5-day average true range in points. With the multiplier and DTE it gives a reference strike distance. Typed by you.<br>
+          <strong>IV Rank</strong>: auto-filled for SPX / XSP / SPY from the 52-week VIX rank (a proxy, not a true per-ticker IV rank). Other tickers: enter it yourself. Editing the box makes it manual. ≥30% passes, 15–29% warns, &lt;15% NO-GO.<br>
+          <strong>DTE (weeks)</strong>: the strike table uses the listed expiry closest to this many weeks out (within 5 days). 3–5 weeks is ideal; 2 or 6 warns; outside 2–6 is NO-GO.<br>
+          <strong>Trend vs 20 EMA</strong>: above EMA uses a 1.5× ATR multiplier; below uses 2.0× (more cushion). Short-DTE boost: +0.5 at 1 week, +0.3 at 2 weeks. This gives the ATR reference strikes shown in the checks.<br>
+          <strong>Monday gap</strong>: open inside Friday's range = tradable. Outside = skip.<br>
+          <strong>Wing width</strong>: distance between the short and long strike. The strike table uses the put wing width for both sides of an iron condor, and selecting an IC row sets the call width to match.<br>
+          <strong>Credits</strong>: filled in (at mid) when you click a row; you can still overwrite them with your actual fill. Bid / mid / ask of the selected row show under each credit box.<br>
+          <strong>Contracts</strong>: position size. Max risk must stay within 5% of your account.
+        </p>
+
+        <p><strong>Strike candidates table</strong></p>
+        <p>
+          Shows up to 5 rows, closest to 15 / 13 / 11 / 9 / 7 short delta (never above 15). Each row shows delta, strikes, Bid / Mid / Ask, <strong>Net credit $</strong> (mid × 100 × contracts), <strong>Max risk $</strong> (PCS: (wing width − credit) × 100 × contracts; IC: the larger of the put and call side) and <strong>Credit / max risk</strong> (Net credit ÷ Max risk, green at 10% or more).<br>
+          <strong>Iron condor pairing</strong>: <em>Equal distance from spot</em> puts both short strikes about the same number of points from spot (the call delta is lower because calls are cheaper than puts, so fewer rows may qualify). <em>Equal delta tier</em> pairs the same delta on both sides (more rows, but the call is usually closer to spot).<br>
+          Strikes are hidden when the short leg has no bid, a wide bid-ask spread, no usable long leg at your wing width, or (single stocks) thin open interest. The source (Cboe, or yfinance as backup) and pull time show under the table. After a ticker, DTE or wing-width change the table reloads and your selection is cleared.<br>
+          <strong>POP choice</strong>: in the expectancy card, pick the hard-coded POP (recommended: IC 72%, PCS 85%) or the delta-implied POP (calculated from the selected row). Expectancy is a warning only — it never causes a NO-GO.
         </p>
 
         <p><strong>Position sizing rule</strong></p>
-        <p>Maximum risk per trade is capped at 5% of account size. The Contracts input will turn red if you exceed this. Reduce contracts or widen the wings.</p>
+        <p>Maximum risk per trade is capped at 5% of account size. The note under Contracts turns red if you exceed this. Reduce contracts or widen the wings.</p>
 
         <p><strong>Tax &amp; settlement footnote</strong></p>
         <p>The bottom footnote changes by ticker — broad-based index options (SPX/XSP/NDX/RUT) get Section 1256 60/40 tax treatment; SPY/QQQ/IWM and single stocks get standard equity-option tax treatment with assignment risk.</p>
 
         <p><strong>Data source</strong></p>
-        <p>The active data source is shown in the title badge. Change it in your <code>.env</code> file (DATA_SOURCE=yfinance|finnhub|alphavantage|polygon). Spot and ATR auto-fetch for supported tickers; index quotes (SPX, NDX, RUT) require manual entry on free tiers.</p>
+        <p>The active data source is shown in the title badge. Change it in your <code>.env</code> file (DATA_SOURCE=yfinance|alphavantage|polygon; yfinance is the default). Spot auto-fetches for stocks, ETFs and the SPX / XSP / NDX / RUT indexes (delayed quotes). The Strike candidates table comes from the Cboe delayed option chain, with yfinance as the backup.</p>
       </div>
     </details>
   </div>
@@ -330,7 +419,7 @@
         </div>
         <div class="icard">
           <div class="ilabel">IV Rank %</div>
-          <input type="number" id="ivr" value="45" min="0" max="100" step="1" oninput="calc()">
+          <input type="number" id="ivr" value="45" min="0" max="100" step="1" oninput="onIvrInput()">
           <div class="isub" id="ivr-sub">Moderate</div>
         </div>
         <div class="icard">
@@ -376,7 +465,8 @@
         </div>
         <div class="icard" style="border-top:3px solid #1D9E75;">
           <div class="ilabel">Put credit ($)</div>
-          <input type="number" id="put_credit" value="3.00" min="0.10" max="50" step="0.10" oninput="calc()">
+          <input type="number" id="put_credit" value="3.00" min="0.10" max="50" step="0.01" oninput="calc()">
+          <div class="qbox" id="put-quote"></div>
         </div>
         <div class="icard" id="call-w-card" style="border-top:3px solid #E24B4A;">
           <div class="ilabel">Call wing width ($)</div>
@@ -384,7 +474,8 @@
         </div>
         <div class="icard" id="call-c-card" style="border-top:3px solid #E24B4A;">
           <div class="ilabel">Call credit ($)</div>
-          <input type="number" id="call_credit" value="2.50" min="0.10" max="50" step="0.10" oninput="calc()">
+          <input type="number" id="call_credit" value="2.50" min="0.10" max="50" step="0.01" oninput="calc()">
+          <div class="qbox" id="call-quote"></div>
         </div>
         <div class="icard" style="border-top:3px solid #7F77DD;">
           <div class="ilabel">Contracts</div>
@@ -415,6 +506,18 @@
     </div>
   </div>
 
+  <p class="sec-label">Strike candidates (|short delta| 7–15)</p>
+  <div class="cand-card" id="cand-card">
+    <div class="cand-head">
+      <div>
+        <div class="cand-title" id="cand-title">Strike candidates</div>
+        <div class="cand-meta" id="cand-meta"></div>
+      </div>
+      <button type="button" class="cand-btn" onclick="loadChain(true)">↻ Refresh chain</button>
+    </div>
+    <div id="cand-body"><div class="cand-banner">Loading option chain…</div></div>
+  </div>
+
   <p class="sec-label">Strike map</p>
   <div class="viz-card">
     <div class="viz-title">Profit / loss zones at expiry</div>
@@ -436,13 +539,15 @@
     <div class="disclaimer-title">Disclaimer</div>
     This tool is provided strictly for informational and educational purposes only. It does not constitute financial, investment, tax, legal, or trading advice, and no part of it should be relied upon as a recommendation to buy, sell, or hold any security or to engage in any trading strategy. Options trading involves substantial risk of loss and is not suitable for all investors. Past performance, model outputs, and hypothetical results do not guarantee future results. You are solely responsible for your own trading decisions. Always consult a qualified financial advisor, tax professional, or licensed broker before acting on any information shown here.
   </div>
+  <div class="built-by">Built by Pranay Srivastava</div>
 </div>
 
 <script>
 var mode = 'ic';
+var CH = { data:null, key:null, sel:{put:null, call:null}, selIdx:-1, timer:null, ivrManual:false, ivrNote:'', seq:0, loading:false, error:null, popBasis:'hard', pairing:'distance' };
 
 // ── Config (loaded from backend on page load) ────────────────────────────────
-var APP_CONFIG = { data_source: 'yfinance', eco_calendar_available: false };
+var APP_CONFIG = { data_source: 'yfinance' };
 
 // Tickers that require manual spot entry (no free real-time index feed)
 var INDEX_TICKERS = ['SPX', 'XSP', 'NDX', 'RUT'];
@@ -473,8 +578,51 @@ function acknowledgeDisclaimer() {
 
 showDisclaimerIfNeeded();
 
-function isDark() {
-  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+function currentTheme() {
+  var t = document.documentElement.getAttribute('data-theme');
+  if (t === 'light' || t === 'dark') return t;
+  return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+function isDark() { return currentTheme() === 'dark'; }
+function updateThemeBtn() {
+  var b = document.getElementById('theme-btn');
+  if (b) b.textContent = isDark() ? '☀ Light theme' : '🌙 Dark theme';
+}
+function toggleTheme() {
+  var next = isDark() ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('pcsIcTool.theme', next); } catch (e) {}
+  updateThemeBtn();
+  calc();   // redraws the strike map in the new colours
+}
+
+// NYSE full-day holidays 2026-2027 (early 1 PM closes are not tracked)
+var NYSE_HOLIDAYS = ['2026-01-01','2026-01-19','2026-02-16','2026-04-03','2026-05-25','2026-06-19','2026-07-03','2026-09-07','2026-11-26','2026-12-25',
+                     '2027-01-01','2027-01-18','2027-02-15','2027-03-26','2027-05-31','2027-06-18','2027-07-05','2027-09-06','2027-11-25','2027-12-24'];
+function etNow() {
+  var parts = new Intl.DateTimeFormat('en-US', { timeZone:'America/New_York', year:'numeric', month:'2-digit', day:'2-digit', weekday:'short', hour:'numeric', minute:'numeric', hourCycle:'h23' }).formatToParts(new Date());
+  var o = {}; parts.forEach(function(p) { o[p.type] = p.value; });
+  return { date: o.year + '-' + o.month + '-' + o.day, weekday: o.weekday, mins: parseInt(o.hour, 10) * 60 + parseInt(o.minute, 10) };
+}
+// Cboe's quote timestamp has no timezone ("2026-10-20 15:20:31"); it matches UTC (pull time in ET is 4-5 h earlier)
+function cboeTimeString(ts) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(ts || '');
+  if (!m) return ts || '';
+  return etString(new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6])).toISOString());
+}
+function marketIsOpenET() {
+  var n = etNow();
+  if (n.weekday === 'Sat' || n.weekday === 'Sun') return false;
+  if (NYSE_HOLIDAYS.indexOf(n.date) !== -1) return false;
+  return n.mins >= 570 && n.mins < 960;   // 9:30-16:00 ET
+}
+function updateClock() {
+  var c = document.getElementById('clock'), m = document.getElementById('mkt');
+  if (!c || !m) return;
+  c.textContent = new Date().toLocaleString('en-US', { timeZone:'America/New_York', weekday:'short', month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit' }) + ' ET';
+  var open = marketIsOpenET();
+  m.textContent = open ? 'Market is open' : 'Market is closed';
+  m.className = 'mkt ' + (open ? 'open' : 'closed');
 }
 
 function svgColors() {
@@ -597,6 +745,7 @@ function setMode(m) {
   document.getElementById('btn-ic').classList.toggle('active', m === 'ic');
   document.getElementById('call-w-card').style.display = m === 'ic' ? '' : 'none';
   document.getElementById('call-c-card').style.display = m === 'ic' ? '' : 'none';
+  CH.sel = {put:null, call:null}; CH.selIdx = -1; setQuotes(); renderCandidates();
   calc();
 }
 
@@ -636,6 +785,7 @@ function calc() {
 
   document.getElementById('vix-sub').textContent = vix < 15 ? 'Very calm' : vix < 20 ? 'Calm' : vix < 25 ? 'Elevated' : vix < 30 ? 'Caution' : 'Danger';
   document.getElementById('ivr-sub').textContent = ivr < 15 ? 'Avoid' : ivr < 30 ? 'Low edge ⚠' : ivr < 50 ? 'Moderate' : ivr < 70 ? 'Good' : 'Excellent';
+  document.getElementById('ivr-sub').textContent += CH.ivrNote;
 
   var baseMult    = trend === 'below' ? 2.0 : 1.5;
   var dteBoost    = dteW === 1 ? 0.5 : dteW === 2 ? 0.3 : 0;
@@ -648,6 +798,11 @@ function calc() {
   var longPut     = shortPut - putWidth;
   var shortCall   = roundStrike(spot + dist);
   var longCall    = shortCall + callWidth;
+  var atrShortPut = shortPut, atrShortCall = shortCall;
+  var selPut  = CH.sel.put;
+  var selCall = isIC ? CH.sel.call : null;
+  if (selPut)  { shortPut  = selPut.short_strike;  longPut  = selPut.long_strike; }
+  if (selCall) { shortCall = selCall.short_strike; longCall = selCall.long_strike; }
   var totalCredit = isIC ? putCredit + callCredit : putCredit;
   var putRisk     = rnd((putWidth  - putCredit)  * 100);
   var callRisk    = isIC ? rnd((callWidth - callCredit) * 100) : 0;
@@ -667,8 +822,15 @@ function calc() {
   var callCredPct = (isIC && callWidth > 0) ? rnd(callCredit / callWidth * 100, 1) : 0;
   var avgWidth      = isIC ? (putWidth + callWidth) / 2 : putWidth;
   var totalCredPct  = avgWidth > 0 ? rnd(totalCredit / avgWidth * 100, 1) : 0;
-  var pop         = isIC ? 0.72 : 0.85;
-  var expectancy  = rnd(pop * maxProfit - (1 - pop) * maxRisk);
+  // Credit quality (Step 9): credit as % of max risk (both in $ per contract)
+  var credRiskPct   = maxRisk > 0 ? rnd(maxProfit / maxRisk * 100, 1) : 0;
+  var popHard     = isIC ? 0.72 : 0.85;
+  var popDelta    = selPut ? (isIC ? (selCall ? 1 - (selPut.delta + selCall.delta) : null) : 1 - selPut.delta) : null;
+  function expAt(p) { return rnd(p * maxProfit - (1 - p) * maxRisk); }
+  var useDelta    = CH.popBasis === 'delta' && popDelta !== null;
+  var pop         = useDelta ? popDelta : popHard;
+  var popLabel    = useDelta ? 'delta-implied' : 'hard-coded';
+  var expectancy  = expAt(pop);
   var totalExpect = rnd(expectancy * contracts);
   var putBE       = roundStrike(shortPut  - totalCredit);
   var callBE      = isIC ? roundStrike(shortCall + totalCredit) : null;
@@ -742,7 +904,7 @@ function calc() {
     { step:'Step 2',   name:'VIX regime',            pass: vix<25,                warn: vix>=20&&vix<25,
       passDetail: 'VIX ' + vix.toFixed(1) + (vix<20 ? ' — calm, full size OK.' : ' — acceptable, monitor.'),
       warnDetail: 'VIX ' + vix.toFixed(1) + ' — elevated. Reduce size 50%.',
-      failDetail: 'VIX ' + vix.toFixed(1) + ' — HARD STOP. No new trades above 30.' },
+      failDetail: 'VIX ' + vix.toFixed(1) + ' — NO-GO. Too high (25 or above).' },
     { step:'Step 2b',  name:'IV Rank filter',        pass: ivr>=15,               warn: ivr>=15&&ivr<30,
       passDetail: 'IVR ' + ivr + (ivr>=50 ? '% — excellent selling conditions.' : '% — sufficient edge.'),
       warnDetail: 'IVR ' + ivr + '% — below 30% threshold. Options are cheap; edge is thin.',
@@ -756,25 +918,27 @@ function calc() {
       warnDetail: (dteW*7) + ' DTE — outside ideal 21–35 day window.',
       failDetail: 'DTE outside optimal range. Target 21–35 days.' },
     { step:'Step 5–6', name:'Put strike placement',  pass: shortPut>0,            warn:false,
-      passDetail: 'Short put ' + fmt(shortPut) + ' — ' + fmt(dist) + ' pts below spot. Calc: ' + multExplain + '.',
+      passDetail: selPut ? 'Short put ' + fmt(shortPut) + ' (chain pick, delta ' + rnd(selPut.delta*100,1) + ') — ' + fmt(rnd(spot-shortPut)) + ' pts below spot. ATR reference strike: ' + fmt(atrShortPut) + ' (' + multExplain + ').'
+                           : 'Short put ' + fmt(shortPut) + ' — ' + fmt(dist) + ' pts below spot. Calc: ' + multExplain + '.',
       failDetail: 'Check ATR and spot inputs.' },
   ];
 
   if (isIC) {
     checks.push({ step:'Step 5–6b', name:'Call strike placement', pass: shortCall>0, warn:false,
-      passDetail: 'Short call ' + fmt(shortCall) + ' — ' + fmt(dist) + ' pts above spot.',
+      passDetail: selCall ? 'Short call ' + fmt(shortCall) + ' (chain pick, delta ' + rnd(selCall.delta*100,1) + ') — ' + fmt(rnd(shortCall-spot)) + ' pts above spot. ATR reference strike: ' + fmt(atrShortCall) + '.'
+                            : 'Short call ' + fmt(shortCall) + ' — ' + fmt(dist) + ' pts above spot.',
       failDetail: 'Check inputs.' });
   }
 
   if (isIC) {
-    checks.push({ step:'Step 9', name:'Combined credit >= 10% of avg wing width', pass: true, warn: totalCredPct<10,
-      passDetail: 'Combined credit $' + totalCredit.toFixed(2) + ' = ' + totalCredPct + '% of avg $' + avgWidth + ' wing — ' + (totalCredPct>=20 ? 'excellent.' : totalCredPct>=15 ? 'strong.' : 'meets 10% threshold.'),
-      warnDetail: 'Combined credit ' + totalCredPct + '% < 10% of avg wing ($' + avgWidth + '). Edge is thin — consider widening wings or finding better strikes.',
+    checks.push({ step:'Step 9', name:'Combined credit >= 10% of max risk', pass: true, warn: credRiskPct<10,
+      passDetail: 'Combined credit $' + totalCredit.toFixed(2) + ' ($' + fmt(maxProfit) + ') = ' + credRiskPct + '% of max risk $' + fmt(maxRisk) + ' — ' + (credRiskPct>=20 ? 'excellent.' : credRiskPct>=15 ? 'strong.' : 'meets 10% threshold.'),
+      warnDetail: 'Combined credit $' + fmt(maxProfit) + ' = ' + credRiskPct + '% of max risk $' + fmt(maxRisk) + ' (< 10%). Edge is thin — consider better strikes or a narrower risk profile.',
       failDetail: '' });
   } else {
-    checks.push({ step:'Step 9', name:'Credit >= 10% of wing width', pass: true, warn: putCredPct<10,
-      passDetail: 'Credit ' + putCredPct + '% of width — ' + (putCredPct>=20 ? 'excellent.' : putCredPct>=15 ? 'strong.' : 'meets 10% threshold.'),
-      warnDetail: 'Credit ' + putCredPct + '% < 10% of wing width. Edge is thin.',
+    checks.push({ step:'Step 9', name:'Credit >= 10% of max risk', pass: true, warn: credRiskPct<10,
+      passDetail: 'Credit $' + putCredit.toFixed(2) + ' ($' + fmt(maxProfit) + ') = ' + credRiskPct + '% of max risk $' + fmt(maxRisk) + ' — ' + (credRiskPct>=20 ? 'excellent.' : credRiskPct>=15 ? 'strong.' : 'meets 10% threshold.'),
+      warnDetail: 'Credit $' + fmt(maxProfit) + ' = ' + credRiskPct + '% of max risk $' + fmt(maxRisk) + ' (< 10%). Edge is thin.',
       failDetail: '' });
   }
   if (isIC) {
@@ -789,10 +953,11 @@ function calc() {
     warnDetail: contracts + ' contracts exceeds 5% limit (max ' + maxContracts + '). Total risk $' + fmt(totalMaxRisk) + ' vs limit $' + fmt(acctLimit) + '. Reduce size.',
     failDetail: 'Risk $' + fmt(maxRisk) + '/contract exceeds 5% limit ($' + fmt(acctLimit) + '). Reduce width.' });
 
-  checks.push({ step:'Step 12', name:'Expectancy positive', pass: expectancy>0, warn: expectancy>0&&expectancy<25,
-    passDetail: 'Expectancy +$' + fmt(expectancy) + '/contract at ' + rnd(pop*100) + '% POP.',
-    warnDetail: 'Expectancy +$' + fmt(expectancy) + '/contract — thin. Review structure.',
-    failDetail: 'Negative expectancy ($' + fmt(expectancy) + '). Improve credit or structure.' });
+  checks.push({ step:'Step 12', name:'Expectancy positive', pass: true, warn: expectancy<25,
+    passDetail: 'Expectancy +$' + fmt(expectancy) + '/contract at ' + rnd(pop*100) + '% POP (' + popLabel + ').',
+    warnDetail: expectancy > 0 ? 'Expectancy +$' + fmt(expectancy) + '/contract — thin. Review structure.'
+                               : 'Expectancy ' + (expectancy<0?'-':'') + '$' + fmt(Math.abs(expectancy)) + '/contract at ' + rnd(pop*100) + '% POP (' + popLabel + ') — warning only, not a stop. Review credit, structure and POP basis.',
+    failDetail: '' });
 
   var hardFails = checks.filter(function(c) { return !c.pass && !c.warn; });
   var hasWarn   = checks.some(function(c) { return c.warn; });
@@ -845,8 +1010,23 @@ function calc() {
     return '<div class="exp-row"><span class="exp-l">' + item[0] + '</span><span class="exp-v ' + item[2] + '">' + item[1] + '</span></div>';
   }).join('');
 
+  function popCol(key, title, tag, p) {
+    var on = (key === 'delta') === useDelta;
+    var ok = p !== null;
+    return '<label style="flex:1 1 180px;border:1px solid ' + (on ? 'var(--blue-border)' : 'var(--border)') + ';background:' + (on ? 'var(--blue-bg)' : 'transparent') + ';border-radius:8px;padding:8px 10px;cursor:' + (ok ? 'pointer' : 'default') + ';opacity:' + (ok ? 1 : 0.6) + ';">' +
+      '<div style="font-size:11px;color:var(--text2);"><input type="radio" name="popbasis" ' + (on ? 'checked ' : '') + (ok ? '' : 'disabled ') + 'onchange="setPopBasis(\'' + key + '\')"> ' + title + '</div>' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:3px;">' + tag + '</div>' +
+      (ok ? '<div style="font-size:15px;font-weight:600;">' + rnd(p*100, 1) + '% POP</div><div style="font-size:12px;color:var(--text2);">Expectancy ' + (expAt(p) >= 0 ? '+' : '') + '$' + fmt(expAt(p)) + ' / contract</div>'
+          : '<div style="font-size:12px;color:var(--text2);">Select a chain row' + (isIC ? ' (put + call)' : '') + ' to calculate</div>') +
+      '</label>';
+  }
+  var popBlock = '<div style="margin-top:10px;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;">POP basis — you choose</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:5px;">' +
+    popCol('hard', 'Hard-coded', 'Recommended default (' + (isIC ? 'IC 72%' : 'PCS 85%') + ')', popHard) +
+    popCol('delta', 'Delta-implied', 'Calculated: ' + (isIC ? '1 − (put Δ + call Δ)' : '1 − short put Δ') + (selPut && CH.data && CH.data.delta_estimated ? ' (Δ est.)' : ''), popDelta) +
+    '</div>';
   document.getElementById('exp-card').innerHTML =
-    '<div class="exp-title">Expectancy at ' + rnd(pop*100) + '% POP — ' + (isIC ? 'iron condor' : 'put credit spread') + '</div>' + expRows;
+    '<div class="exp-title">Expectancy at ' + rnd(pop*100) + '% POP (' + popLabel + ') — ' + (isIC ? 'iron condor' : 'put credit spread') + '</div>' + '<div class="exp-grid">' + expRows + '</div>' + popBlock;
 
   renderFootnote(ticker, cfg);
 }
@@ -901,8 +1081,11 @@ var lastFetchedTicker = null;
 function onTickerChange() {
   clearTimeout(tickerDebounceTimer);
   calc();
+  CH.ivrManual = false;
+  clearSel(); scheduleChain();
   tickerDebounceTimer = setTimeout(function() {
     fetchSpot(false);
+    loadIvRank();
   }, 800);
 }
 
@@ -919,15 +1102,9 @@ async function fetchSpot(isManualRefresh) {
   var ticker = (tickerInput || '').toUpperCase().trim();
   if (!ticker) { setSpotStatus('Enter a ticker', 'err'); return; }
 
-  // Index tickers — no free real-time API on most sources
-  if (INDEX_TICKERS.indexOf(ticker) !== -1) {
-    setSpotStatus('Manual entry required — ' + ticker + ' index not available on free data tiers', 'warn');
-    return;
-  }
-
   if (!isManualRefresh && lastFetchedTicker === ticker) return;
 
-  setSpotStatus('Fetching ' + ticker + ' via ' + APP_CONFIG.data_source + '…', 'loading');
+  setSpotStatus('Fetching ' + ticker + '…', 'loading');
   try {
     var resp = await fetch('/api/spot?ticker=' + encodeURIComponent(ticker));
     if (!resp.ok) {
@@ -1007,6 +1184,10 @@ function renderEco(parsed, panel, content, loading, tsEl, ts) {
   }).join('');
 
   var srcNote = parsed.source ? ' [' + parsed.source + ']' : '';
+  if (parsed.coverage_end) {
+    var daysLeft = Math.round((new Date(parsed.coverage_end + 'T12:00:00') - new Date()) / 86400000);
+    if (daysLeft < 45) srcNote += daysLeft < 0 ? ' · ⚠ calendar data ended ' + parsed.coverage_end : ' · ⚠ calendar data ends ' + parsed.coverage_end;
+  }
   content.innerHTML =
     '<div class="eco-title ' + lvl + '">' +
       '<span class="eco-badge ' + lvl + '">' + lvl.toUpperCase() + '</span>' +
@@ -1016,6 +1197,178 @@ function renderEco(parsed, panel, content, loading, tsEl, ts) {
     eventsHtml;
 
   tsEl.textContent = 'Updated ' + ts.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) + srcNote;
+}
+
+// ── Strike candidates (Cboe primary, yfinance fallback) ─────────────────────
+function esc(s) { return String(s).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function f2(n) { return Number(n).toFixed(2); }
+function etString(iso) {
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-US', { timeZone:'America/New_York', weekday:'short', day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit' }) + ' ET';
+}
+function expiryString(iso) {
+  var d = new Date(iso + 'T12:00:00Z');
+  return d.toLocaleDateString('en-US', { timeZone:'UTC', weekday:'short', day:'numeric', month:'short', year:'numeric' });
+}
+function clearSel() { CH.sel = {put:null, call:null}; CH.selIdx = -1; setQuotes(); renderCandidates(); }
+function setQuotes() {
+  var pe = document.getElementById('put-quote'), ce = document.getElementById('call-quote');
+  if (!pe || !ce) return;
+  pe.textContent = CH.sel.put  ? 'bid ' + f2(CH.sel.put.bid)  + ' · mid ' + f2(CH.sel.put.mid)  + ' · ask ' + f2(CH.sel.put.ask)  : '';
+  ce.textContent = CH.sel.call ? 'bid ' + f2(CH.sel.call.bid) + ' · mid ' + f2(CH.sel.call.mid) + ' · ask ' + f2(CH.sel.call.ask) : '';
+}
+function scheduleChain() {
+  clearTimeout(CH.timer);
+  CH.timer = setTimeout(function() { loadChain(false); }, 600);
+}
+async function loadChain(force) {
+  var ticker = (document.getElementById('ticker').value || '').toUpperCase().trim();
+  var weeks  = parseInt(document.getElementById('dte_w').value) || 4;
+  var pw     = parseFloat(document.getElementById('put_width').value) || 0;
+  var cw     = parseFloat(document.getElementById('call_width').value) || 0;
+  if (!ticker || pw <= 0 || cw <= 0) return;
+  cw = pw;   // iron condor candidates use the same wing width on both sides
+  var key = [ticker, weeks, pw].join('|');
+  if (!force && key === CH.key && CH.data) return;
+  var seq = ++CH.seq;
+  CH.loading = true; CH.error = null;
+  CH.sel = {put:null, call:null}; CH.selIdx = -1; setQuotes(); renderCandidates();
+  try {
+    var resp = await fetch('/api/option-candidates?ticker=' + encodeURIComponent(ticker) + '&weeks=' + weeks + '&put_width=' + pw + '&call_width=' + cw);
+    var data = await resp.json().catch(function() { return {}; });
+    if (seq !== CH.seq) return;
+    if (!resp.ok) throw new Error(data.error || ('HTTP ' + resp.status));
+    CH.data = data; CH.key = key;
+  } catch (e) {
+    if (seq !== CH.seq) return;
+    CH.data = null; CH.key = null; CH.error = e.message;
+  }
+  CH.loading = false;
+  renderCandidates();
+}
+function distSub(v, sign) { return (v === undefined || v === null) ? '' : '<div style="font-size:10.5px;color:var(--text3);">' + sign + fmt(rnd(Math.abs(v), 1)) + ' pts</div>'; }
+function crPct(mid, risk) { return risk > 0 ? (mid / risk * 100) : 0; }
+function crCell(pct) { return '<td class="' + (pct >= 10 ? 'cand-ok' : 'cand-low') + '">' + pct.toFixed(1) + '%</td>'; }
+function icRows(d) { return (CH.pairing === 'delta' && d.ic_rows_delta) ? d.ic_rows_delta : d.ic_rows; }
+function setPairing(k) { CH.pairing = k; CH.sel = {put:null, call:null}; CH.selIdx = -1; setQuotes(); renderCandidates(); calc(); }
+function selectRow(i) {
+  var d = CH.data; if (!d) return;
+  var contracts = Math.max(1, parseInt(document.getElementById('contracts').value) || 1);
+  if (mode === 'ic') {
+    var r = icRows(d)[i]; if (!r) return;
+    CH.sel = { put:r.put, call:r.call };
+    document.getElementById('call_width').value = d.put_width;   // equal wings on both sides
+    document.getElementById('put_credit').value  = f2(r.put.mid);
+    document.getElementById('call_credit').value = f2(r.call.mid);
+  } else {
+    var p = d.put_rows[i]; if (!p) return;
+    CH.sel = { put:p, call:null };
+    document.getElementById('put_credit').value = f2(p.mid);
+  }
+  CH.selIdx = i;
+  setQuotes(); renderCandidates(); calc();
+}
+function renderCandidates() {
+  var body = document.getElementById('cand-body');
+  if (!body) return;
+  var meta = document.getElementById('cand-meta');
+  var title = document.getElementById('cand-title');
+  var isIC = mode === 'ic';
+  title.textContent = isIC ? 'Iron condor candidates' : 'Put credit spread candidates';
+  if (CH.loading) { meta.textContent = ''; body.innerHTML = '<div class="cand-banner">Loading option chain…</div>'; return; }
+  if (CH.error) {
+    meta.textContent = '';
+    body.innerHTML = '<div class="cand-banner err"><b>Option chain unavailable.</b> ' + esc(CH.error) + '<br>You can still enter strikes and credits manually.</div>';
+    return;
+  }
+  var d = CH.data;
+  if (!d) { body.innerHTML = ''; return; }
+  var contracts = Math.max(1, parseInt(document.getElementById('contracts').value) || 1);
+  var out = '';
+  var metaBits = [];
+  if (d.expiry) metaBits.push('Expiry ' + expiryString(d.expiry) + ' · ' + d.dte + ' DTE (target ' + d.target_dte + ')');
+  if (d.root) metaBits.push(esc(d.root));
+  if (d.spot) metaBits.push('chain spot ' + fmt(rnd(d.spot, 2)));
+  meta.innerHTML = metaBits.join(' · ');
+
+  if (d.fallback_reason) out += '<div class="cand-banner warn"><b>Using yfinance bid/ask (Cboe had no usable quotes).</b> ' + (d.delta_estimated ? 'Delta is estimated (Black-Scholes) where Cboe delta is missing.' : 'Delta is taken from Cboe.') + ' <span style="opacity:.8">(' + esc(d.fallback_reason) + ')</span></div>';
+  if (!marketIsOpenET()) out += '<div class="cand-banner warn"><b>Market closed.</b> Quotes are from the last session. Bid and ask can be zero or stale, so credits shown are indicative only.</div>';
+
+  if (isIC) {
+    var cwIn = parseFloat(document.getElementById('call_width').value) || 0;
+    var byDist = CH.pairing !== 'delta' && d.ic_pairing === 'distance';
+    out += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;font-size:12px;color:var(--text2);">Pair short strikes by: ' +
+      '<label style="cursor:pointer;"><input type="radio" name="pairing" ' + (byDist ? 'checked ' : '') + 'onchange="setPairing(\'distance\')"> Equal distance from spot</label> ' +
+      '<label style="cursor:pointer;"><input type="radio" name="pairing" ' + (!byDist ? 'checked ' : '') + 'onchange="setPairing(\'delta\')"> Equal delta tier</label></div>';
+    out += '<div class="cand-banner' + (cwIn !== d.put_width ? ' warn' : '') + '">Both sides use the same wing width ($' + d.put_width + ', from the put wing width box). ' +
+      (byDist ? 'Short strikes are at (about) the same distance from spot. Each row starts from a put delta tier and picks the call closest in distance. Calls are cheaper than puts, so the call delta is lower (down to ' + (d.ic_call_floor || 1) + ').' + (d.ic_unpaired ? ' ' + d.ic_unpaired + ' put tier' + (d.ic_unpaired === 1 ? '' : 's') + ' had no call at a matching distance (too far out, call delta below ' + (d.ic_call_floor || 1) + ').' : '')
+             : 'Both short strikes are at the same delta tier, so the call is usually closer to spot than the put (points from spot shown under each short strike).') +
+      (cwIn !== d.put_width ? ' Your call wing width box ($' + cwIn + ') will be set to match when you select a row.' : '') + '</div>';
+  }
+  var rowsIC = icRows(d) || [];
+  var rows = (isIC ? rowsIC : d.put_rows) || [];
+  if (d.message || !rows.length) {
+    var msg = d.message || (isIC ? 'No put/call pair shares a delta tier on this expiry.' : 'No qualifying put strikes.');
+    out += '<div class="cand-banner none"><b>' + esc(msg) + '</b><br><span style="color:var(--text2)">Try a different DTE or wing width, or refresh the chain.</span></div>';
+  } else {
+    var dl = d.delta_estimated ? 'Δ est.' : 'Δ';
+    var h = '<div class="cand-scroll"><table class="cand"><thead><tr>';
+    if (isIC) h += '<th>Put ' + dl + '</th><th>Long Put</th><th>Short Put</th><th class="cand-sep">Call ' + dl + '</th><th>Short Call</th><th>Long Call</th>';
+    else      h += '<th>Put ' + dl + '</th><th>Long Put</th><th>Short Put</th>';
+    h += '<th class="cand-sep">Bid</th><th>Mid</th><th>Ask</th><th>Net credit $ (×' + contracts + ')</th><th>Max risk $ (×' + contracts + ')</th><th>Credit / max risk</th></tr></thead><tbody>';
+    rows.forEach(function(r, i) {
+      var sel = i === CH.selIdx;
+      var bid, mid, ask, risk, cells;
+      if (isIC) {
+        var p = r.put, c = r.call;
+        bid = p.bid + c.bid; mid = p.mid + c.mid; ask = p.ask + c.ask;
+        risk = Math.max((d.put_width - p.mid), (d.call_width - c.mid));
+        cells = '<td>' + (p.delta*100).toFixed(1) + '</td><td>' + fmt(p.long_strike) + '</td><td><b>' + fmt(p.short_strike) + '</b>' + distSub(r.dist_put, '−') + '</td>' +
+                '<td class="cand-sep">' + (c.delta*100).toFixed(1) + '</td><td><b>' + fmt(c.short_strike) + '</b>' + distSub(r.dist_call, '+') + '</td><td>' + fmt(c.long_strike) + '</td>';
+      } else {
+        bid = r.bid; mid = r.mid; ask = r.ask; risk = d.put_width - r.mid;
+        cells = '<td>' + (r.delta*100).toFixed(1) + '</td><td>' + fmt(r.long_strike) + '</td><td><b>' + fmt(r.short_strike) + '</b></td>';
+      }
+      h += '<tr class="crow' + (sel ? ' sel' : '') + '" tabindex="0" role="button" aria-pressed="' + sel + '" onclick="selectRow(' + i + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();selectRow(' + i + ');}">' +
+           cells + '<td class="cand-sep">' + f2(bid) + '</td><td><b>' + f2(mid) + '</b></td><td>' + f2(ask) + '</td>' +
+           '<td><b>$' + fmt(Math.round(mid * 100 * contracts)) + '</b></td><td>$' + fmt(Math.round(risk * 100 * contracts)) + '</td>' + crCell(crPct(mid, risk)) + '</tr>';
+    });
+    h += '</tbody></table></div>';
+    out += h;
+    out += '<div class="cand-banner" style="margin-top:6px">Tap a row to fill the strikes and credits (mid). Bid / mid / ask appear under the credit boxes. Max risk = (wing width − mid credit) × 100 per contract; for an iron condor it is the larger of the put side and the call side. Credit / max risk = Net credit ÷ Max risk, the same rule as the checks below (≥ 10% passes).</div>';
+  }
+  var hid = (d.hidden ? (d.hidden.put || 0) + (d.hidden.call || 0) : 0);
+  if (hid > 0) out += '<div class="cand-banner">' + hid + ' in-band strike' + (hid === 1 ? '' : 's') + ' hidden: bid = 0, bid-ask spread above ' + d.limits.max_spread_pct + '% of mid, open interest below ' + d.limits.min_open_interest + ' (single stocks), or no usable long leg at your wing width.</div>';
+
+  out += '<div class="cand-foot"><span><b>Source: ' + esc(d.source_label) + '</b>' + (d.delta_estimated ? ' · delta estimated' : '') + '</span>' +
+         '<span>Pulled ' + esc(etString(d.pulled_at)) + '</span>' +
+         (d.quote_timestamp ? '<span>Quote time ' + esc(cboeTimeString(d.quote_timestamp)) + '</span>' : '') + '</div>';
+  body.innerHTML = out;
+}
+
+function setPopBasis(k) { CH.popBasis = k; calc(); }
+
+// ── IV rank (VIX 52-week rank proxy) ────────────────────────────────────────
+function onIvrInput() { CH.ivrManual = true; CH.ivrNote = ' · manual'; calc(); }
+async function loadIvRank() {
+  var ticker = (document.getElementById('ticker').value || '').toUpperCase().trim();
+  if (!ticker || CH.ivrManual) return;
+  try {
+    var resp = await fetch('/api/iv-rank?ticker=' + encodeURIComponent(ticker));
+    var d = await resp.json().catch(function() { return {}; });
+    if (!resp.ok) throw new Error(d.error || ('HTTP ' + resp.status));
+    if (CH.ivrManual) return;
+    if (d.applicable) {
+      document.getElementById('ivr').value = Math.round(d.rank);
+      CH.ivrNote = ' · VIX 52-wk rank (proxy)';
+    } else {
+      CH.ivrNote = ' · manual (no proxy for ' + ticker + ')';
+    }
+  } catch (e) {
+    CH.ivrNote = ' · auto rank unavailable, manual';
+  }
+  calc();
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
@@ -1030,9 +1383,16 @@ async function init() {
     }
   } catch(e) {}
 
+  updateThemeBtn(); updateClock(); setInterval(updateClock, 1000);
   setMode('ic');
-  setSpotStatus('Manual entry required — SPX index quotes not available on free data tiers', 'warn');
+  fetchSpot(true);
   loadEcoCalendar(false);
+  ['dte_w', 'put_width', 'call_width'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', function() { clearSel(); scheduleChain(); });
+  });
+  document.getElementById('contracts').addEventListener('input', renderCandidates);
+  loadChain(true);
+  loadIvRank();
 }
 
 init();

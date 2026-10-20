@@ -27,3 +27,8 @@ logs/
 *.egg-info/
 dist/
 build/
+
+# Scratch work: keep the two helper scripts, ignore backups and temporary files
+scratch/*
+!scratch/test_chain_sources.py
+!scratch/sim_skew.py

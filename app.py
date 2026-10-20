@@ -9,7 +9,7 @@ Routes
 GET  /                              → Render templates/index.html
 GET  /api/spot?ticker=SPY           → Spot price + % change
 GET  /api/market-data?ticker=SPY    → Spot + VIX + ATR(5)
-GET  /api/eco-calendar              → This week's US economic events (Finnhub, with hardcoded 2026 fallback)
+GET  /api/eco-calendar              → This week's US economic events (sourced Fed/BLS/BEA release dates, 2026-2027)
 
 Configuration
 -------------
@@ -27,7 +27,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 load_dotenv()
 
-from data.data_fetcher import get_spot, get_market_data, get_eco_calendar
+from data.data_fetcher import get_spot, get_market_data, get_eco_calendar, ACTIVE_SOURCE
+from data import option_chain
 
 app = Flask(__name__)
 
@@ -110,6 +111,45 @@ def api_eco_calendar():
         return _error(str(e), 502)
 
 
+@app.route("/api/option-candidates")
+def api_option_candidates():
+    """
+    GET /api/option-candidates?ticker=SPX&weeks=4&put_width=25&call_width=25
+
+    Strike candidates (|short delta| 7-15) for PCS and Iron Condor from the
+    option chain. Cboe delayed quotes primary, yfinance fallback.
+    """
+    ticker, err = _require_ticker()
+    if err:
+        return err
+    try:
+        weeks = int(request.args.get("weeks", 4))
+        put_width = float(request.args.get("put_width", 0))
+        call_width = float(request.args.get("call_width", put_width))
+    except ValueError:
+        return _error("weeks must be an integer; widths must be numbers")
+    if weeks < 1 or weeks > 52 or put_width <= 0 or call_width <= 0:
+        return _error("weeks 1-52 and positive wing widths are required")
+    try:
+        return jsonify(option_chain.get_candidates(ticker, weeks, put_width, call_width))
+    except option_chain.ChainError as e:
+        return _error(str(e), 502)
+    except Exception as e:
+        return _error("Unexpected error: %s" % e, 500)
+
+
+@app.route("/api/iv-rank")
+def api_iv_rank():
+    """GET /api/iv-rank?ticker=SPX -- 52-week VIX rank proxy (S&P-linked tickers only)."""
+    ticker, err = _require_ticker()
+    if err:
+        return err
+    try:
+        return jsonify(option_chain.get_vix_rank(ticker))
+    except option_chain.ChainError as e:
+        return _error(str(e), 502)
+
+
 @app.route("/api/config")
 def api_config():
     """
@@ -119,8 +159,7 @@ def api_config():
     display which data source is active.
     """
     return jsonify({
-        "data_source": os.getenv("DATA_SOURCE", "yfinance"),
-        "eco_calendar_available": os.getenv("DATA_SOURCE", "yfinance") == "finnhub",
+        "data_source": ACTIVE_SOURCE,
     })
 
 

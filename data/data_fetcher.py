@@ -5,7 +5,6 @@ Routes all external data calls based on DATA_SOURCE in .env.
 
 Supported sources:
   yfinance      — Free, no API key. Covers ETFs/stocks + VIX (^VIX).
-  finnhub       — Free tier key required. Real-time quotes + economic calendar.
   alphavantage  — Free API key required. Quotes + VIX via TIME_SERIES_DAILY.
   polygon       — Paid key required. Real-time quotes, options data.
 
@@ -23,7 +22,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATA_SOURCE       = os.getenv("DATA_SOURCE", "yfinance").lower().strip()
-FINNHUB_KEY       = os.getenv("FINNHUB_API_KEY", "")
 ALPHA_VANTAGE_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "")
 POLYGON_KEY       = os.getenv("POLYGON_API_KEY", "")
 
@@ -164,109 +162,6 @@ def _market_data_yfinance(ticker):
     }
 
 
-def _eco_yfinance():
-    """
-    yfinance has no economic calendar API. Return a static 'unavailable'
-    response so the frontend can fall back gracefully.
-    """
-    return {
-        "alertLevel": "calm",
-        "headline": "Economic calendar not available via yfinance",
-        "reason": ("yfinance does not provide an economic calendar. "
-                   "Switch DATA_SOURCE to 'finnhub' in .env to enable "
-                   "live economic event data."),
-        "events": [],
-        "source": "yfinance",
-        "timestamp": _ts(),
-    }
-
-
-# ─────────────────────────────────────────────
-# Finnhub
-# ─────────────────────────────────────────────
-
-def _fh_get(path, params=None):
-    import requests
-    base = "https://finnhub.io/api/v1"
-    p = params or {}
-    p["token"] = FINNHUB_KEY
-    resp = requests.get(base + path, params=p, timeout=8)
-    resp.raise_for_status()
-    return resp.json()
-
-
-def _spot_finnhub(ticker):
-    data       = _fh_get("/quote", {"symbol": ticker})
-    price      = round(float(data.get("c", 0)), 2)
-    change_pct = round(float(data.get("dp", 0)), 2)
-    return {"price": price, "change_pct": change_pct, "source": "finnhub", "timestamp": _ts()}
-
-
-def _market_data_finnhub(ticker):
-    spot_data  = _spot_finnhub(ticker)
-    spot       = spot_data["price"]
-
-    # VIX via Finnhub quote (uses symbol CBOE:VIX or ^VIX depending on subscription)
-    try:
-        vix_data = _fh_get("/quote", {"symbol": "^VIX"})
-        vix      = round(float(vix_data.get("c", 0)), 2)
-    except Exception:
-        vix = 0.0
-
-    # ATR(5) via candles (resolution=D, last 15 days)
-    try:
-        now  = int(time.time())
-        then = now - 86400 * 20  # 20 days back
-        candles = _fh_get("/stock/candle",
-                          {"symbol": ticker, "resolution": "D",
-                           "from": then, "to": now})
-        if candles.get("s") == "ok":
-            import pandas as pd
-            df = pd.DataFrame({
-                "High":  candles["h"],
-                "Low":   candles["l"],
-                "Close": candles["c"],
-            })
-            atr5 = _round_atr(df)
-        else:
-            atr5 = 0.0
-    except Exception:
-        atr5 = 0.0
-
-    return {"spot": spot, "vix": vix, "atr5": atr5,
-            "source": "finnhub", "timestamp": _ts()}
-
-
-def _eco_finnhub():
-    """
-    Finnhub's /calendar/economic endpoint moved behind a paid tier and now
-    returns a 402 (or similar) for free-tier keys. Any failure here —
-    HTTP error, timeout, malformed response — falls back to the hardcoded,
-    sourced 2026 calendar in eco_calendar_2026.py rather than propagating
-    a 502 up to the frontend.
-    """
-    try:
-        from_date, to_date = _get_week_bounds()
-        data = _fh_get("/calendar/economic",
-                       {"from": from_date, "to": to_date})
-        raw = data.get("economicCalendar", [])
-        events = []
-        for e in raw:
-            if (e.get("country") or "").upper() != "US":
-                continue
-            imp = _classify_event(e.get("event", ""))
-            if not imp:
-                continue
-            d   = datetime.datetime.fromisoformat(
-                (e.get("time") or e.get("date") or "")[:10]
-            )
-            events.append({"day": DAY_LABELS[d.weekday() + 1 if d.weekday() < 6 else 0],
-                           "name": e["event"], "impact": imp})
-        return _build_eco_response(events, "finnhub")
-    except Exception:
-        return _eco_hardcoded_2026()
-
-
 def _eco_hardcoded_2026():
     """
     Fallback economic calendar: hardcoded, sourced 2026 US macro release
@@ -302,7 +197,8 @@ def _eco_hardcoded_2026():
         d = e["date"]
         events.append({"day": DAY_LABELS[d.weekday() + 1], "name": e["name"], "impact": imp})
 
-    resp = _build_eco_response(events, "hardcoded-2026")
+    resp = _build_eco_response(events, "sourced Fed/BLS/BEA")
+    resp["coverage_end"] = COVERAGE_END.isoformat()
 
     if week_fri > COVERAGE_END:
         resp["headline"] = "⚠ Calendar data may be incomplete this week"
@@ -372,19 +268,6 @@ def _market_data_alphavantage(ticker):
             "source": "alphavantage", "timestamp": _ts()}
 
 
-def _eco_alphavantage():
-    """Alpha Vantage has no economic calendar endpoint on free tier."""
-    return {
-        "alertLevel": "calm",
-        "headline": "Economic calendar not available via Alpha Vantage",
-        "reason": ("Alpha Vantage does not provide a free economic calendar. "
-                   "Switch DATA_SOURCE to 'finnhub' in .env for live event data."),
-        "events": [],
-        "source": "alphavantage",
-        "timestamp": _ts(),
-    }
-
-
 # ─────────────────────────────────────────────
 # Polygon.io
 # ─────────────────────────────────────────────
@@ -448,46 +331,42 @@ def _market_data_polygon(ticker):
             "source": "polygon", "timestamp": _ts()}
 
 
-def _eco_polygon():
-    """Polygon economic calendar requires paid tier."""
-    return {
-        "alertLevel": "calm",
-        "headline": "Economic calendar requires Polygon Starter+ plan",
-        "reason": ("The economic calendar endpoint is available on Polygon.io "
-                   "paid plans. Switch DATA_SOURCE to 'finnhub' for free "
-                   "economic event data."),
-        "events": [],
-        "source": "polygon",
-        "timestamp": _ts(),
-    }
-
-
 # ─────────────────────────────────────────────
 # Public API — dispatch by DATA_SOURCE
 # ─────────────────────────────────────────────
 
 _DISPATCH = {
-    "yfinance":     (_spot_yfinance,     _market_data_yfinance,     _eco_yfinance),
-    "finnhub":      (_spot_finnhub,      _market_data_finnhub,      _eco_finnhub),
-    "alphavantage": (_spot_alphavantage, _market_data_alphavantage, _eco_alphavantage),
-    "polygon":      (_spot_polygon,      _market_data_polygon,      _eco_polygon),
+    "yfinance":     (_spot_yfinance,     _market_data_yfinance,     _eco_hardcoded_2026),
+    "alphavantage": (_spot_alphavantage, _market_data_alphavantage, _eco_hardcoded_2026),
+    "polygon":      (_spot_polygon,      _market_data_polygon,      _eco_hardcoded_2026),
 }
 
 
+# Any DATA_SOURCE value that is not listed above (for example a leftover from an old .env) uses yfinance.
+ACTIVE_SOURCE = DATA_SOURCE if DATA_SOURCE in _DISPATCH else "yfinance"
+if ACTIVE_SOURCE != DATA_SOURCE:
+    print(f"[data_fetcher] DATA_SOURCE='{DATA_SOURCE}' is not supported - using yfinance. "
+          f"Supported: {', '.join(_DISPATCH.keys())}")
+
+
 def _get_handlers():
-    handlers = _DISPATCH.get(DATA_SOURCE)
-    if handlers is None:
-        raise ValueError(
-            f"Unknown DATA_SOURCE='{DATA_SOURCE}'. "
-            f"Choose from: {', '.join(_DISPATCH.keys())}"
-        )
-    return handlers
+    return _DISPATCH[ACTIVE_SOURCE]
+
+
+# Cash index tickers -> Yahoo symbols (delayed quotes)
+YAHOO_INDEX_SYMBOLS = {"SPX": "^GSPC", "XSP": "^XSP", "NDX": "^NDX", "RUT": "^RUT"}
 
 
 def get_spot(ticker: str) -> dict:
     """Fetch current spot price and % change for a ticker."""
+    t = ticker.upper()
+    if t in YAHOO_INDEX_SYMBOLS:
+        # Cash indexes: free delayed quote via Yahoo regardless of DATA_SOURCE
+        data = _spot_yfinance(YAHOO_INDEX_SYMBOLS[t])
+        data["source"] = "yfinance (index, delayed)"
+        return data
     fn, _, _ = _get_handlers()
-    return fn(ticker.upper())
+    return fn(t)
 
 
 def get_market_data(ticker: str) -> dict:
