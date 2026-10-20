@@ -7,7 +7,7 @@ WHAT CHANGED SINCE THE LAST COMMIT
 -----------------------------------
 Modified:
   app.py                  - new /api/eco-calendar-scraped route, port default moved to 5057
-  data/data_fetcher.py     - _eco_finnhub() now falls back to the hardcoded 2026 calendar on failure
+  data/data_fetcher.py     - economic calendar now comes from the sourced hardcoded calendar (Finnhub removed)
   requirements.txt         - added beautifulsoup4, lxml
   .env.example              - FLASK_PORT default updated to 5057
   README.md                - usage instructions updated to localhost:5057

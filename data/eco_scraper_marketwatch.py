@@ -2,7 +2,7 @@
 data/eco_scraper_marketwatch.py — MarketWatch economic-calendar scraper
 ========================================================================
 Secondary, ADDITIVE data source for the economic-calendar panel. This is
-deliberately isolated from data_fetcher.py / _eco_finnhub() / the hardcoded
+deliberately isolated from data_fetcher.py / the hardcoded
 2026 fallback (eco_calendar_2026.py) — a scrape failure here must never
 affect the primary calendar panel.
 

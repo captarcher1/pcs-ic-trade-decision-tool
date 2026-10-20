@@ -1,8 +1,8 @@
 """
 data/eco_calendar_2026.py — Hardcoded, sourced 2026 US economic-release calendar
 =================================================================================
-Fallback for data_fetcher.py's _eco_finnhub() when Finnhub's
-/calendar/economic endpoint is unavailable (it moved behind a paid tier).
+Source of the economic-events panel (data_fetcher.py's _eco_hardcoded_2026()).
+Covers 2026 and 2027.
 
 This module is a pure data source. It does NOT classify impact (high/med)
 or format day labels — the caller (data_fetcher.py) runs the dates
@@ -22,14 +22,14 @@ Initial jobless claims are NOT hardcoded. The Department of Labor / BLS
 publish this figure every single Thursday, so get_events() computes the
 Thursday of the requested week on the fly rather than listing 52 dates.
 
-Maintenance: when 2027 release schedules are published (typically each
+Maintenance: covers 2026 and 2027. When 2028 release schedules are published (typically each
 fall for the following year), extend the *_DATES lists below the same
 way, re-verify against the source URLs above, and bump LAST_VERIFIED.
 """
 
 import datetime
 
-LAST_VERIFIED = "2026-06-24"
+LAST_VERIFIED = "2026-10-20"  # 2027 dates added from fed/BLS/BEA pages on this date
 
 # ── FOMC meeting (decision day = 2nd day of the 2-day meeting) ───────────────
 FOMC_DATES = [
@@ -41,6 +41,15 @@ FOMC_DATES = [
     datetime.date(2026, 9, 16),
     datetime.date(2026, 10, 28),
     datetime.date(2026, 12, 9),
+    # 2027 (decision day = 2nd day). Fed notes each date is tentative until confirmed at the prior meeting.
+    datetime.date(2027, 1, 27),
+    datetime.date(2027, 3, 17),
+    datetime.date(2027, 4, 28),
+    datetime.date(2027, 6, 9),
+    datetime.date(2027, 7, 28),
+    datetime.date(2027, 9, 15),
+    datetime.date(2027, 10, 27),
+    datetime.date(2027, 12, 8),
 ]
 
 # ── CPI (Consumer Price Index), 8:30 AM ET ───────────────────────────────────
@@ -58,6 +67,19 @@ CPI_DATES = [
     datetime.date(2026, 10, 14),
     datetime.date(2026, 11, 10),
     datetime.date(2026, 12, 10),
+    # 2027
+    datetime.date(2027, 1, 13),
+    datetime.date(2027, 2, 11),
+    datetime.date(2027, 3, 10),
+    datetime.date(2027, 4, 13),
+    datetime.date(2027, 5, 12),
+    datetime.date(2027, 6, 10),
+    datetime.date(2027, 7, 14),
+    datetime.date(2027, 8, 11),
+    datetime.date(2027, 9, 14),
+    datetime.date(2027, 10, 14),
+    datetime.date(2027, 11, 10),
+    datetime.date(2027, 12, 10),
 ]
 
 # ── Employment Situation / Nonfarm Payrolls, 8:30 AM ET ──────────────────────
@@ -75,6 +97,19 @@ NFP_DATES = [
     datetime.date(2026, 10, 2),
     datetime.date(2026, 11, 6),
     datetime.date(2026, 12, 4),
+    # 2027 (Dec 2027 release not yet published by BLS)
+    datetime.date(2027, 1, 8),
+    datetime.date(2027, 2, 5),
+    datetime.date(2027, 3, 5),
+    datetime.date(2027, 4, 2),
+    datetime.date(2027, 5, 7),
+    datetime.date(2027, 6, 4),
+    datetime.date(2027, 7, 2),
+    datetime.date(2027, 8, 6),
+    datetime.date(2027, 9, 3),
+    datetime.date(2027, 10, 8),
+    datetime.date(2027, 11, 5),
+    datetime.date(2027, 12, 3),
 ]
 
 # ── PPI (Producer Price Index), 8:30 AM ET ───────────────────────────────────
@@ -94,6 +129,19 @@ PPI_DATES = [
     datetime.date(2026, 10, 15),
     datetime.date(2026, 11, 13),
     datetime.date(2026, 12, 15),
+    # 2027
+    datetime.date(2027, 1, 14),
+    datetime.date(2027, 2, 12),
+    datetime.date(2027, 3, 12),
+    datetime.date(2027, 4, 14),
+    datetime.date(2027, 5, 13),
+    datetime.date(2027, 6, 11),
+    datetime.date(2027, 7, 15),
+    datetime.date(2027, 8, 10),
+    datetime.date(2027, 9, 10),
+    datetime.date(2027, 10, 15),
+    datetime.date(2027, 11, 12),
+    datetime.date(2027, 12, 15),
 ]
 
 # ── GDP (Advance / Second / Third estimates), 8:30 AM ET ─────────────────────
@@ -111,6 +159,19 @@ GDP_DATES = [
     datetime.date(2026, 10, 29),  # Q3 2026, advance
     datetime.date(2026, 11, 25),  # Q3 2026, second
     datetime.date(2026, 12, 23),  # Q3 2026, third
+    # 2027 (BEA schedule)
+    datetime.date(2027, 1, 28),
+    datetime.date(2027, 2, 25),
+    datetime.date(2027, 3, 31),
+    datetime.date(2027, 4, 29),
+    datetime.date(2027, 5, 27),
+    datetime.date(2027, 6, 25),
+    datetime.date(2027, 7, 29),
+    datetime.date(2027, 8, 25),
+    datetime.date(2027, 9, 30),
+    datetime.date(2027, 10, 28),
+    datetime.date(2027, 11, 24),
+    datetime.date(2027, 12, 22),
 ]
 
 # ── PCE / Personal Income and Outlays, 8:30-10:00 AM ET ──────────────────────
@@ -128,6 +189,19 @@ PCE_DATES = [
     datetime.date(2026, 10, 29),  # Sep 2026 data
     datetime.date(2026, 11, 25),  # Oct 2026 data
     datetime.date(2026, 12, 23),  # Nov 2026 data
+    # 2027 (BEA schedule; same days as GDP)
+    datetime.date(2027, 1, 28),
+    datetime.date(2027, 2, 25),
+    datetime.date(2027, 3, 31),
+    datetime.date(2027, 4, 29),
+    datetime.date(2027, 5, 27),
+    datetime.date(2027, 6, 25),
+    datetime.date(2027, 7, 29),
+    datetime.date(2027, 8, 25),
+    datetime.date(2027, 9, 30),
+    datetime.date(2027, 10, 28),
+    datetime.date(2027, 11, 24),
+    datetime.date(2027, 12, 22),
 ]
 
 # Event-name labels are chosen so the existing HIGH_IMPACT / MED_IMPACT
